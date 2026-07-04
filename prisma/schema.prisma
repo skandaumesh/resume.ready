@@ -1,0 +1,64 @@
+// Prisma schema — PostgreSQL (Supabase)
+// Identity is handled by Clerk. We only store app data here, linked to the
+// Clerk user id (a string like "user_2abc..."). There is no password/credential
+// table — Clerk owns that.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Resume {
+  id        String   @id @default(cuid())
+  // Clerk user id — every query is scoped to this so users only see their own.
+  userId    String
+  title     String   @default("Untitled Resume")
+  role      String // free-text target role the student typed
+  template  String   @default("classic") // see src/lib/templates.ts
+
+  // Raw Q&A intake answers, keyed by question id. Flexible per-role shape,
+  // so stored as JSON rather than rigid columns.
+  answers   Json     @default("{}")
+
+  // Contact/header info the user enters (name, email, phone, links).
+  contact   Json     @default("{}")
+
+  // AI-generated, structured resume content (summary, experience, projects,
+  // skills, education). Shape defined by ResumeContent in src/lib/types.ts.
+  content   Json?
+
+  status    String   @default("draft") // "draft" | "generated"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Daily usage counters for rate limiting. Key encodes who + which bucket +
+// which day (e.g. "u:user_2abc:ai:2026-07-04" or "ip:1.2.3.4:roast:2026-07-04"),
+// so rows expire naturally by becoming irrelevant. DB-backed so it works on
+// serverless hosts without Redis.
+model RateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// First-party analytics. One row per meaningful action (resume generated,
+// ATS check run, roast served...). This is what lets us honestly compute
+// stats like "average ATS score" instead of inventing them.
+model Event {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String? // null for anonymous/public tools
+  meta      Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([name, createdAt])
+}
