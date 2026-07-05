@@ -83,23 +83,24 @@ const Q: Record<string, Question> = Object.fromEntries(
 
 let customFieldCounter = 0;
 
-export default function EditResumePage() {
-  const { id } = useParams() as { id: string };
+// A4 page width in px at 96dpi. We scale the page to fill the pane WIDTH and
+// let it scroll vertically, so the sheet sits at the top and reads at a
+// comfortable size, like a real A4 document in a frame.
+const PAGE_WIDTH = 794;
 
-  const previewContainerRef = useRef<HTMLDivElement>(null);
-  // A4 page width in px at 96dpi. We scale the page to fill the pane WIDTH and
-  // let it scroll vertically, so the sheet sits at the top and reads at a
-  // comfortable size, like a real A4 document in a frame.
-  const PAGE_WIDTH = 794;
-  const [previewScale, setPreviewScale] = useState(0.6);
+// Scaled A4 preview pane — used in the desktop side panel and the mobile
+// full-screen overlay, each with its own container width to scale against.
+function ScaledPreview({ html }: { html: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.6);
   const [docHeight, setDocHeight] = useState(1123);
 
   useEffect(() => {
-    const container = previewContainerRef.current;
+    const container = containerRef.current;
     if (!container) return;
     const observer = new ResizeObserver((entries) => {
       const width = entries[0].contentRect.width;
-      if (width > 0) setPreviewScale(width / PAGE_WIDTH);
+      if (width > 0) setScale(width / PAGE_WIDTH);
     });
     observer.observe(container);
     return () => observer.disconnect();
@@ -107,7 +108,7 @@ export default function EditResumePage() {
 
   // Measure the rendered resume's real height so the scaled page scrolls
   // naturally instead of being clipped to a fixed A4 box.
-  function handlePreviewLoad(e: { currentTarget: HTMLIFrameElement }) {
+  function handleLoad(e: { currentTarget: HTMLIFrameElement }) {
     const doc = e.currentTarget.contentDocument;
     if (doc) {
       const h = doc.documentElement?.scrollHeight || doc.body?.scrollHeight || 1123;
@@ -115,12 +116,44 @@ export default function EditResumePage() {
     }
   }
 
+  return (
+    <div
+      ref={containerRef}
+      className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-xl"
+    >
+      {/* Spacer holds the scaled page's real height so the pane scrolls. */}
+      <div
+        className="relative mx-auto"
+        style={{ width: PAGE_WIDTH * scale, height: docHeight * scale }}
+      >
+        <div
+          className="absolute left-0 top-0 origin-top-left bg-white shadow-2xl"
+          style={{ width: PAGE_WIDTH, transform: `scale(${scale})` }}
+        >
+          <iframe
+            title="Live resume preview"
+            srcDoc={html}
+            onLoad={handleLoad}
+            scrolling="no"
+            style={{ width: PAGE_WIDTH, height: docHeight, border: 0, display: "block" }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function EditResumePage() {
+  const { id } = useParams() as { id: string };
+
   const [roleTitle, setRoleTitle] = useState("");
   const [title, setTitle] = useState("");
   const [contact, setContact] = useState<Contact>({});
   const [answers, setAnswers] = useState<Answers>({});
   const [template, setTemplate] = useState<TemplateId>(DEFAULT_TEMPLATE);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  const activeChipRef = useRef<HTMLButtonElement>(null);
   const [generated, setGenerated] = useState<ResumeContent | null>(null);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -201,6 +234,15 @@ export default function EditResumePage() {
     }, 300);
     return () => clearTimeout(t);
   }, [contact, answers, template, generated]);
+
+  // Keep the active step chip visible in the mobile stepper.
+  useEffect(() => {
+    activeChipRef.current?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  }, [step]);
 
   const meter = useMemo(() => {
     if (generated)
@@ -471,16 +513,26 @@ export default function EditResumePage() {
           >
             ←
           </Link>
-          <div>
-            <h1 className="text-lg font-bold text-stone-900">Your resume</h1>
-            <p className="text-xs text-stone-500">Target role: {roleTitle}</p>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold text-stone-900">Your resume</h1>
+            <p className="truncate text-xs text-stone-500">Target role: {roleTitle}</p>
           </div>
+          <button
+            onClick={() => setMobilePreviewOpen(true)}
+            className="ml-auto flex shrink-0 items-center gap-1.5 rounded-xl bg-stone-900 px-3.5 py-2 text-xs font-semibold text-white shadow lg:hidden"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Preview
+          </button>
         </div>
       </div>
 
       {/* ── MAIN LAYOUT ───────────────────────────────────── */}
       <main className="flex min-h-0 flex-1 overflow-hidden p-3 sm:p-5">
-        <div className="mx-auto flex h-full w-full max-w-[1800px] gap-6">
+        <div className="mx-auto flex h-full w-full max-w-[1800px] flex-col gap-3 lg:flex-row lg:gap-6">
           {/* ── LEFT: steps nav ─────────────────────────────── */}
           <nav className="hidden w-64 shrink-0 flex-col overflow-y-auto lg:flex glass-card p-4">
           <div className="h-full overflow-y-auto pr-2">
@@ -513,36 +565,55 @@ export default function EditResumePage() {
           </div>
         </nav>
 
-        {/* Mobile step nav — horizontal scroll */}
-        <div className="mb-3 flex shrink-0 gap-2 overflow-x-auto lg:hidden">
-          {STEPS.map((s, i) => {
-            const active = i === step;
-            return (
-              <button
-                key={s.key}
-                onClick={() => goTo(i)}
-                className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
-                  active
-                    ? "bg-brand-600 text-white shadow"
-                    : "bg-white/60 text-stone-600"
-                }`}
-              >
-                <span
-                  className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
-                    active ? "bg-white text-brand-700" : "bg-stone-200 text-stone-600"
-                  }`}
+        {/* Mobile stepper — compact chips (label only on active) + progress bar */}
+        <div className="shrink-0 lg:hidden">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {STEPS.map((s, i) => {
+              const active = i === step;
+              const done = i < step;
+              return (
+                <button
+                  key={s.key}
+                  ref={active ? activeChipRef : undefined}
+                  onClick={() => goTo(i)}
+                  aria-label={`Step ${i + 1}: ${s.label}`}
+                  className={
+                    active
+                      ? "flex shrink-0 items-center gap-2 rounded-full bg-brand-600 py-2 pl-2 pr-4 text-white shadow transition"
+                      : `flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold transition ${
+                          done
+                            ? "bg-brand-200 text-brand-700"
+                            : "border border-stone-200 bg-white/70 text-stone-500"
+                        }`
+                  }
                 >
-                  {i + 1}
-                </span>
-                <span className="whitespace-nowrap text-xs font-medium">{s.label}</span>
-              </button>
-            );
-          })}
+                  {active ? (
+                    <>
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-bold text-brand-700">
+                        {i + 1}
+                      </span>
+                      <span className="whitespace-nowrap text-xs font-semibold">{s.label}</span>
+                    </>
+                  ) : done ? (
+                    "✓"
+                  ) : (
+                    i + 1
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/70">
+            <div
+              className="h-full rounded-full bg-brand-500 transition-all duration-300"
+              style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+            />
+          </div>
         </div>
 
         {/* ── CENTER: current step form ─────────────────────── */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="glass-card flex min-h-0 flex-1 flex-col overflow-y-auto p-5 sm:p-6">
+          <div className="glass-card flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-6">
             {current.key === "personal" && (
               <>
                 <h2 className="text-xl font-bold text-stone-900">Personal details</h2>
@@ -875,18 +946,18 @@ export default function EditResumePage() {
 
             {/* Back / Next — pinned at bottom of the scroll area */}
             <div className="mt-auto border-t border-stone-200 pt-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <button
                   onClick={() => goTo(step - 1)}
                   disabled={step === 0}
-                  className="rounded-xl border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-40"
+                  className="rounded-xl border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-40 sm:py-2.5"
                 >
                   Back
                 </button>
                 {!isFinish && (
                   <button
                     onClick={() => goTo(step + 1)}
-                    className="rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+                    className="flex-1 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700 sm:flex-none sm:py-2.5"
                   >
                     Next →
                   </button>
@@ -913,36 +984,9 @@ export default function EditResumePage() {
               </div>
             </div>
 
-            <div
-              ref={previewContainerRef}
-              className="relative mt-4 min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-xl"
-            >
-              {/* Spacer holds the scaled page's real height so the pane scrolls. */}
-              <div
-                className="relative mx-auto"
-                style={{ width: PAGE_WIDTH * previewScale, height: docHeight * previewScale }}
-              >
-                <div
-                  className="absolute left-0 top-0 origin-top-left bg-white shadow-2xl"
-                  style={{ width: PAGE_WIDTH, transform: `scale(${previewScale})` }}
-                >
-                  <iframe
-                    title="Live resume preview"
-                    srcDoc={previewHtml}
-                    onLoad={handlePreviewLoad}
-                    scrolling="no"
-                    style={{ width: PAGE_WIDTH, height: docHeight, border: 0, display: "block" }}
-                  />
-                </div>
-              </div>
+            <div className="mt-4 flex min-h-0 flex-1 flex-col">
+              <ScaledPreview html={previewHtml} />
             </div>
-
-            {savedNote && (
-              <span className="pointer-events-none absolute bottom-4 left-4 z-10 flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-lg">
-                <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                {savedNote}
-              </span>
-            )}
 
             {!generated && (
               <p className="mt-4 text-center text-xs text-stone-400">
@@ -953,6 +997,52 @@ export default function EditResumePage() {
         </div>
       </div>
       </main>
+
+      {/* Auto-save toast — fixed so it shows on every screen size */}
+      {savedNote && (
+        <span className="pointer-events-none fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-lg">
+          <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+          {savedNote}
+        </span>
+      )}
+
+      {/* Mobile full-screen live preview */}
+      {mobilePreviewOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#e9ece1] lg:hidden">
+          <div className="flex shrink-0 items-center gap-3 border-b border-white/40 bg-white/40 px-4 py-3 backdrop-blur-sm">
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-stone-900">Live preview</h2>
+              <p className="text-xs text-stone-500">
+                {meter.label}:{" "}
+                <span className={`font-semibold ${meterColor}`}>{meter.value}%</span>
+              </p>
+            </div>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <button
+                onClick={() => setGalleryOpen(true)}
+                className="rounded-xl bg-stone-900 px-3 py-2 text-xs font-semibold text-white hover:bg-stone-800"
+              >
+                Change template
+              </button>
+              <button
+                onClick={() => setMobilePreviewOpen(false)}
+                aria-label="Close preview"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-300 bg-white text-lg text-stone-600"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col p-3">
+            <ScaledPreview html={previewHtml} />
+          </div>
+          {!generated && (
+            <p className="shrink-0 pb-3 text-center text-xs text-stone-400">
+              Live draft. Finish steps to generate AI bullet points.
+            </p>
+          )}
+        </div>
+      )}
 
       <TemplateGallery
         open={galleryOpen}
