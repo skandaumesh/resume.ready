@@ -154,6 +154,8 @@ export default function EditResumePage() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
   const activeChipRef = useRef<HTMLButtonElement>(null);
+  // Serialized last-saved payload — lets us skip PATCHes when nothing changed.
+  const lastSavedRef = useRef<string>("");
   const [generated, setGenerated] = useState<ResumeContent | null>(null);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -185,11 +187,17 @@ export default function EditResumePage() {
       // Normalize the structured sections to arrays (converts any legacy
       // freeform strings to a single entry so old resumes keep working).
       const rawAnswers = (resume.answers as Answers) ?? {};
-      setAnswers({
+      const normalizedAnswers = {
         ...rawAnswers,
         experience: toEntries(rawAnswers.experience, "description"),
         projects: toEntries(rawAnswers.projects, "description"),
         education: toEntries(rawAnswers.education, "degree"),
+      };
+      setAnswers(normalizedAnswers);
+      lastSavedRef.current = JSON.stringify({
+        title: resume.title ?? "",
+        contact: loadedContact,
+        answers: normalizedAnswers,
       });
       if (isTemplateId(resume.template)) setTemplate(resume.template);
       if (resume.content)
@@ -271,21 +279,26 @@ export default function EditResumePage() {
   }
 
   const saveSilently = useCallback(async () => {
+    const payload = JSON.stringify({ title, contact, answers });
+    if (payload === lastSavedRef.current) return; // nothing changed — skip the round trip
     const res = await fetch(`/api/resumes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, contact, answers }),
+      body: payload,
     });
     if (res.ok) {
+      lastSavedRef.current = payload;
       setSavedNote("Saved");
       setTimeout(() => setSavedNote(null), 1800);
     }
   }, [id, title, contact, answers]);
 
-  async function goTo(i: number) {
+  function goTo(i: number) {
     const next = Math.max(0, Math.min(STEPS.length - 1, i));
-    await saveSilently();
+    // Switch steps instantly; the save runs in the background so navigation
+    // never waits on the database.
     setStep(next);
+    void saveSilently().catch(() => {});
   }
 
   async function improve(qid: string, label: string) {

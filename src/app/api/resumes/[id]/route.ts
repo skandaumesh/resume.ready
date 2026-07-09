@@ -3,18 +3,15 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { isTemplateId } from "@/lib/templates";
 
-// Confirm the resume exists AND belongs to the caller. Returns the userId or a
-// NextResponse error to short-circuit with.
-async function requireOwnership(id: string) {
+// Resolve the caller's userId, or a NextResponse error to short-circuit with.
+// Ownership itself is enforced inside each query (`where: { id, userId }`) so
+// every handler costs a single database round trip.
+async function requireUser() {
   const { userId } = await auth();
   if (!userId) {
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }
-  const resume = await prisma.resume.findUnique({ where: { id } });
-  if (!resume || resume.userId !== userId) {
-    return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
-  }
-  return { userId, resume };
+  return { userId };
 }
 
 // GET /api/resumes/:id — full resume record.
@@ -23,9 +20,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const res = await requireOwnership(id);
+  const res = await requireUser();
   if ("error" in res) return res.error;
-  return NextResponse.json({ resume: res.resume });
+
+  const resume = await prisma.resume.findFirst({
+    where: { id, userId: res.userId },
+  });
+  if (!resume) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  return NextResponse.json({ resume });
 }
 
 // PATCH /api/resumes/:id — save edits (title, contact, answers, content).
@@ -34,7 +38,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const res = await requireOwnership(id);
+  const res = await requireUser();
   if ("error" in res) return res.error;
 
   const body = await req.json().catch(() => ({}));
@@ -45,12 +49,14 @@ export async function PATCH(
   if (body.content && typeof body.content === "object") data.content = body.content;
   if (isTemplateId(body.template)) data.template = body.template;
 
-  const updated = await prisma.resume.update({
-    where: { id },
+  const { count } = await prisma.resume.updateMany({
+    where: { id, userId: res.userId },
     data,
-    select: { id: true, updatedAt: true },
   });
-  return NextResponse.json({ resume: updated });
+  if (count === 0) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  return NextResponse.json({ resume: { id } });
 }
 
 // DELETE /api/resumes/:id
@@ -59,9 +65,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const res = await requireOwnership(id);
+  const res = await requireUser();
   if ("error" in res) return res.error;
 
-  await prisma.resume.delete({ where: { id } });
+  const { count } = await prisma.resume.deleteMany({
+    where: { id, userId: res.userId },
+  });
+  if (count === 0) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   return NextResponse.json({ ok: true });
 }
