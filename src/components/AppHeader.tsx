@@ -129,6 +129,13 @@ export default function AppHeader() {
   const pathname = usePathname() || "";
   const [collapsed, setCollapsed] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Close the drawer on route change (link clicks navigate but don't
+  // otherwise close it, since the drawer itself unmounts nothing).
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -156,33 +163,88 @@ export default function AppHeader() {
 
   return (
     <>
-      {/* mobile: compact top bar — the icon rail below is desktop-only */}
+      {/* mobile: compact top bar — a hamburger opens the full drawer below,
+          instead of cramming every nav item into a scrolling icon strip. */}
       <header className="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-hairline bg-white/90 px-3 py-2.5 backdrop-blur-xl md:hidden">
-        <Link href="/dashboard" className="flex shrink-0 items-center gap-1.5 pl-1">
-          <img src="/logo-clean.png" alt="ResumeReady" className="h-6 w-auto" />
-        </Link>
-        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-          {LINKS.map((l) => {
-            const active = l.isActive(pathname);
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                title={l.label}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
-                  active ? "text-white" : "text-stone-500 hover:bg-stone-100 hover:text-stone-900"
-                }`}
-                style={active ? { backgroundColor: INK } : undefined}
-              >
-                {l.icon}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Open menu"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-stone-600 hover:bg-stone-100"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <Link href="/dashboard" className="flex shrink-0 items-center gap-1.5 pl-0.5">
+            <img src="/logo-clean.png" alt="ResumeReady" className="h-6 w-auto" />
+          </Link>
+        </div>
         <span className="rounded-full ring-2 ring-stone-900/10">
           <UserButton appearance={USER_BUTTON_APPEARANCE} />
         </span>
       </header>
+
+      {/* mobile: slide-out nav drawer, opened by the hamburger above */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-[60] md:hidden">
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setMobileNavOpen(false)}
+            className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
+          />
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-white p-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <Link href="/dashboard" className="flex items-center gap-1.5" onClick={() => setMobileNavOpen(false)}>
+                <img src="/logo-clean.png" alt="ResumeReady" className="h-6 w-auto" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                aria-label="Close menu"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 hover:bg-stone-100"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <path d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="mt-6 flex flex-col gap-1.5">
+              {LINKS.map((l) => {
+                const active = l.isActive(pathname);
+                return (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                      active
+                        ? "border-blue-200 bg-blue-50 text-[#3385f9]"
+                        : "border-transparent text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                    }`}
+                  >
+                    {l.icon}
+                    {l.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="mt-3 border-t border-hairline pt-3">
+              <Link
+                href="/dashboard/new"
+                className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-bold text-stone-900 shadow-sm transition hover:-translate-y-0.5"
+                style={{ backgroundColor: LIME }}
+              >
+                <span className="text-base leading-none">+</span>
+                New resume
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* desktop: full-width top bar — logo/toggle on the left, account
           avatar on the right. Sits above both the sidebar and the content

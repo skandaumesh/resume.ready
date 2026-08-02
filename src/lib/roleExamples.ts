@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Content for the programmatic SEO pages (/examples/[slug]) — one page per
-// role in the catalogue. Everything is deterministic and written per role
-// CATEGORY, then flavored with the role title, so 29 pages stay maintainable.
-// The sample resumes render through the real template engine, so what Google
-// indexes is exactly what the product produces.
+// Sample resume content per role, used to render live template previews
+// (homepage, dashboard/templates) — one entry per role in the catalogue.
+// Everything is deterministic and written per role CATEGORY, then flavored
+// with the role title, so 29 roles stay maintainable. The sample resumes
+// render through the real template engine, so previews match real output.
 // ─────────────────────────────────────────────────────────────────────────
 
 import { Role, ROLES } from "@/lib/roles";
@@ -323,8 +323,4 @@ export function getRoleExample(slug: string): RoleExample | null {
   ];
 
   return { role, contact: SAMPLE_CONTACT, content, tips: s.tips, faq };
-}
-
-export function allExampleSlugs(): string[] {
-  return ROLES.map((r) => r.slug);
 }

@@ -529,15 +529,18 @@ export default function EditResumePage() {
       <div className="flex shrink-0 items-center gap-3 border-b border-white/40 bg-white/30 px-4 py-3 backdrop-blur-sm sm:px-6 lg:hidden">
         <Link
           href="/dashboard"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 bg-white/70 text-stone-600 hover:bg-white"
+          className="soft-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] text-stone-600 transition hover:brightness-95"
           aria-label="Back to dashboard"
         >
-          ←
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+            <path d="M19 12H5" />
+            <path d="m12 19-7-7 7-7" />
+          </svg>
         </Link>
         <p className="min-w-0 flex-1 truncate text-xs text-stone-500">Target role: {roleTitle}</p>
         <button
           onClick={() => setMobilePreviewOpen(true)}
-          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-stone-900 px-3.5 py-2 text-xs font-semibold text-white shadow"
+          className="soft-surface flex shrink-0 items-center gap-1.5 rounded-[11px] px-3.5 py-2 text-xs font-semibold text-stone-700 transition hover:brightness-95"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
@@ -635,7 +638,7 @@ export default function EditResumePage() {
           </nav>
 
         {/* Mobile stepper — compact chips (label only on active) + progress bar */}
-        <div className="shrink-0 lg:hidden">
+        <div className="relative shrink-0 lg:hidden">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {STEPS.map((s, i) => {
               const active = i === step;
@@ -648,17 +651,18 @@ export default function EditResumePage() {
                   aria-label={`Step ${i + 1}: ${s.label}`}
                   className={
                     active
-                      ? "flex shrink-0 items-center gap-2 rounded-full bg-brand-600 py-2 pl-2 pr-4 text-white shadow transition"
+                      ? "flex shrink-0 items-center gap-2 rounded-full py-2 pl-2 pr-4 text-white transition"
                       : `flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold transition ${
                           done
-                            ? "bg-brand-200 text-brand-700"
-                            : "border border-stone-200 bg-white/70 text-stone-500"
+                            ? "bg-blue-100 text-[#3385f9]"
+                            : "soft-surface text-stone-500"
                         }`
                   }
+                  style={active ? { backgroundColor: "#3385f9" } : undefined}
                 >
                   {active ? (
                     <>
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-bold text-brand-700">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-bold text-[#3385f9]">
                         {i + 1}
                       </span>
                       <span className="whitespace-nowrap text-xs font-semibold">{s.label}</span>
@@ -672,10 +676,12 @@ export default function EditResumePage() {
               );
             })}
           </div>
-          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/70">
+          {/* Fade to signal the strip scrolls, same as the mobile app nav. */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 top-0 w-8 bg-gradient-to-l from-white to-transparent" />
+          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-stone-200">
             <div
-              className="h-full rounded-full bg-brand-500 transition-all duration-300"
-              style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+              className="h-full rounded-full transition-all duration-300"
+              style={{ width: `${((step + 1) / STEPS.length) * 100}%`, backgroundColor: "#3385f9" }}
             />
           </div>
         </div>

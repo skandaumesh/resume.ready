@@ -8,7 +8,7 @@ const COLUMNS: { heading: string; links: { href: string; label: string }[] }[] =
       { href: "/#how-it-works", label: "How It Works" },
       { href: "/#tools", label: "Free Tools" },
       { href: "/#faq", label: "FAQ" },
-      { href: "/examples", label: "Templates" },
+      { href: "/dashboard/templates", label: "Templates" },
     ],
   },
   {
@@ -17,7 +17,6 @@ const COLUMNS: { heading: string; links: { href: string; label: string }[] }[] =
       { href: "/ats-check", label: "ATS Score Checker" },
       { href: "/roast", label: "Resume Roast" },
       { href: "/linkedin-check", label: "LinkedIn Review" },
-      { href: "/examples", label: "Resume Examples" },
     ],
   },
   {

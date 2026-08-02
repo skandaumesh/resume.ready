@@ -141,7 +141,7 @@ function TemplateCarousel() {
           return (
             <Link
               key={t.id}
-              href="/examples"
+              href="/dashboard/templates"
               className="group flex w-72 shrink-0 flex-col gap-2.5 rounded-[13px] bg-[#fbfbfb] p-2.5 outline outline-1 outline-[#f3f3f3] transition duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_12px_22px_-10px_rgba(0,0,0,0.16)]"
               style={{ boxShadow: "0 6px 10px -6px rgba(0,0,0,0.086)" }}
             >
@@ -192,7 +192,7 @@ function TemplateCarousel() {
       {/* footer: view all + arrows, like the reference */}
       <div className="mt-5 flex items-center justify-between">
         <Link
-          href="/examples"
+          href="/dashboard/templates"
           className="rounded-full border border-white/60 bg-white/70 px-4 py-2 text-sm font-medium text-black/80 backdrop-blur transition hover:bg-white/90"
         >
           View all templates
@@ -262,7 +262,7 @@ function TemplateGrid() {
           return (
             <Link
               key={t.id}
-              href="/examples"
+              href="/dashboard/templates"
               className="glow-trace group flex flex-col gap-2.5 rounded-[13px] bg-[#fbfbfb] p-2.5 outline outline-1 outline-[#f3f3f3] transition duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_12px_22px_-10px_rgba(0,0,0,0.16)]"
               style={{ boxShadow: "0 6px 10px -6px rgba(0,0,0,0.086)" }}
             >
@@ -283,7 +283,7 @@ function TemplateGrid() {
 
       <div className="mt-8 flex justify-center">
         <Link
-          href="/examples"
+          href="/dashboard/templates"
           className="rounded-full border border-hairline-strong bg-white px-6 py-3 text-sm font-medium text-content-strong shadow-subtle transition hover:bg-canvas-deep"
         >
           View more templates
@@ -316,6 +316,23 @@ function HowItWorks() {
         accent: "#2563eb",
       })
     : "";
+
+  // Scale to the card's actual rendered width instead of a fixed factor —
+  // the card stretches full-width on mobile (single column), so a fixed
+  // scale() clipped the resume's right edge once the card got narrower
+  // than the desktop two-column layout it was tuned for.
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.685);
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0].contentRect.width;
+      if (width > 0) setScale(width / 794);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <section id="how-it-works" className="border-t border-hairline py-fluid-2xl">
@@ -362,13 +379,13 @@ function HowItWorks() {
 
         {/* right: card layer with a live resume preview */}
         <div className="card-soft aspect-square overflow-hidden p-3">
-          <div className="relative h-full w-full overflow-hidden rounded-[10px] bg-white">
+          <div ref={previewRef} className="relative h-full w-full overflow-hidden rounded-[10px] bg-white">
             <div
               className="pointer-events-none absolute left-1/2 top-0"
               style={{
                 width: "794px",
                 height: "1123px",
-                transform: "translateX(-50%) scale(0.685)",
+                transform: `translateX(-50%) scale(${scale})`,
                 transformOrigin: "top center",
               }}
             >
@@ -391,7 +408,6 @@ const NAV_LINKS = [
   { href: "/ats-check", label: "ATS Check" },
   { href: "/roast", label: "Roast" },
   { href: "/linkedin-check", label: "LinkedIn" },
-  { href: "/examples", label: "Examples" },
 ];
 
 /* ── FAQ — accordion, like the reference ────────────────────────────── */

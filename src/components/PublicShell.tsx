@@ -5,10 +5,9 @@ const NAV_LINKS = [
   { href: "/ats-check", label: "ATS Check", className: "sm:block" },
   { href: "/roast", label: "Roast", className: "sm:block" },
   { href: "/linkedin-check", label: "LinkedIn", className: "md:block" },
-  { href: "/examples", label: "Examples", className: "lg:block" },
 ];
 
-// Chrome for the public (no-login) tool pages: /ats-check, /roast, /examples.
+// Chrome for the public (no-login) tool pages: /ats-check, /roast, /linkedin-check.
 // Same system as the landing page: warm off-white canvas, hairline borders,
 // greyscale type with a single blue action colour.
 export default function PublicShell({
