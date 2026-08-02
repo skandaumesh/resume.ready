@@ -18,21 +18,28 @@ export default function TemplateSelector({
   const router = useRouter();
   const [selected, setSelected] = useState<TemplateId>(current);
   const [saving, setSaving] = useState<TemplateId | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function choose(id: TemplateId) {
     if (id === selected) return;
+    setError(null);
     setSaving(id);
-    const res = await fetch(`/api/resumes/${resumeId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ template: id }),
-    });
-    setSaving(null);
-    if (res.ok) {
-      setSelected(id);
-      router.refresh(); // re-render the preview iframe with the new template
-    } else {
-      alert("Could not change template. Please try again.");
+    try {
+      const res = await fetch(`/api/resumes/${resumeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template: id }),
+      });
+      setSaving(null);
+      if (res.ok) {
+        setSelected(id);
+        router.refresh(); // re-render the preview iframe with the new template
+      } else {
+        setError("Could not change template. Please try again.");
+      }
+    } catch {
+      setSaving(null);
+      setError("Request failed. Check your connection and try again.");
     }
   }
 
@@ -83,6 +90,9 @@ export default function TemplateSelector({
         })}
       </div>
       <p className="mt-3 text-xs text-stone-400">{recommendReason}</p>
+      {error && (
+        <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
+      )}
     </div>
   );
 }

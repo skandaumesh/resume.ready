@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import AppHeader from "@/components/AppHeader";
+import AppShell from "@/components/AppShell";
 import AtsAnalysis from "@/components/AtsAnalysis";
 import { computeAtsScore } from "@/lib/ats";
 import { EMPTY_CONTENT, ResumeContent, ContactInfo } from "@/lib/types";
@@ -103,8 +103,7 @@ export default function AtsCheckerPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <AppHeader />
+    <AppShell>
       <main className="mx-auto max-w-screen-xl px-4 py-8 sm:px-6">
         <div>
           <h1 className="text-2xl font-bold text-stone-900">ATS Checker</h1>
@@ -114,12 +113,12 @@ export default function AtsCheckerPage() {
         </div>
 
         {/* Source toggle */}
-        <div className="mt-6 inline-flex rounded-xl border border-stone-200 bg-white/70 p-1">
+        <div className="soft-surface mt-6 inline-flex rounded-[13px] p-1">
           <button
             onClick={() => setMode("saved")}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+            className={`rounded-[9px] px-4 py-1.5 text-sm font-medium transition ${
               mode === "saved"
-                ? "bg-brand-600 text-white"
+                ? "btn-gradient"
                 : "text-stone-600 hover:text-stone-900"
             }`}
           >
@@ -127,9 +126,9 @@ export default function AtsCheckerPage() {
           </button>
           <button
             onClick={() => setMode("upload")}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+            className={`rounded-[9px] px-4 py-1.5 text-sm font-medium transition ${
               mode === "upload"
-                ? "bg-brand-600 text-white"
+                ? "btn-gradient"
                 : "text-stone-600 hover:text-stone-900"
             }`}
           >
@@ -178,7 +177,7 @@ export default function AtsCheckerPage() {
                 <button
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
-                  className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                  className="btn-gradient rounded-[11px] px-5 py-2.5 text-sm font-semibold disabled:opacity-60"
                 >
                   {uploading ? "Reading file…" : "Choose file"}
                 </button>
@@ -232,6 +231,6 @@ export default function AtsCheckerPage() {
           </div>
         ) : null}
       </main>
-    </div>
+    </AppShell>
   );
 }

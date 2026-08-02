@@ -2,9 +2,14 @@
 // The ONLY place that talks to an AI provider.
 // Providers are tried in order, all via the OpenAI-compatible chat API:
 //   1. Gemini (Google AI Studio free tier — 1,500 requests/day, strong JSON)
-//   2. OpenRouter free-tier models (50/day, or 1,000/day after a $10 top-up)
-// Each provider is skipped when its key isn't set. To add or swap providers,
-// change only this file — the rest of the app calls the exported functions.
+//   2. Groq (fast, generous free tier — check console.groq.com for current limits)
+//   3. Cerebras (~1M tokens/day free, fastest throughput — check cloud.cerebras.ai)
+//   4. OpenRouter free-tier models (50/day, or 1,000/day after a $10 top-up)
+// Each provider is skipped when its key isn't set. Stacking multiple free
+// tiers raises the app's total daily AI capacity without paying for any one
+// of them — add a 5th here the same way if you need more headroom. To add or
+// swap providers, change only this file — the rest of the app calls the
+// exported functions.
 // ─────────────────────────────────────────────────────────────────────────
 
 import { ResumeContent, EMPTY_CONTENT, SECTION_KEYS, SectionKey } from "@/lib/types";
@@ -14,6 +19,10 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 // Google's OpenAI-compatible endpoint for the Gemini API.
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+// Groq's OpenAI-compatible endpoint.
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+// Cerebras' OpenAI-compatible endpoint.
+const CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions";
 
 // Max time to wait on any single model before falling through to the next.
 // Generous enough for large outputs (full-resume rewrites) on slow free models.
@@ -97,6 +106,33 @@ function getProviders(): Provider[] {
       models: splitModels(
         process.env.GEMINI_MODEL || "gemini-2.5-flash,gemini-2.5-flash-lite",
       ),
+    });
+  }
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    providers.push({
+      name: "groq",
+      url: GROQ_URL,
+      apiKey: groqKey,
+      // Groq's free tier is generous and fast — a strong second layer of free
+      // capacity before falling through to OpenRouter's often-busier pool.
+      // Check console.groq.com for current per-model daily/minute limits.
+      models: splitModels(
+        process.env.GROQ_MODEL ||
+          "llama-3.1-8b-instant,openai/gpt-oss-20b,llama-3.3-70b-versatile,openai/gpt-oss-120b",
+      ),
+    });
+  }
+  const cerebrasKey = process.env.CEREBRAS_API_KEY;
+  if (cerebrasKey) {
+    providers.push({
+      name: "cerebras",
+      url: CEREBRAS_URL,
+      apiKey: cerebrasKey,
+      // Purely free tier (no card, no data-training opt-in), ~1M tokens/day,
+      // fastest throughput of any provider here. Check cloud.cerebras.ai for
+      // current limits. zai-glm-4.7 is excluded — deprecating Aug 17, 2026.
+      models: splitModels(process.env.CEREBRAS_MODEL || "gpt-oss-120b,gemma-4-31b"),
     });
   }
   const openrouterKey = process.env.OPENROUTER_API_KEY;
@@ -235,7 +271,7 @@ export async function callAi(
   const providers = getProviders();
   if (!providers.length) {
     throw new Error(
-      "No AI provider configured. Set GEMINI_API_KEY or OPENROUTER_API_KEY in your .env file.",
+      "No AI provider configured. Set GEMINI_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, or OPENROUTER_API_KEY in your .env file.",
     );
   }
 
@@ -276,10 +312,11 @@ export async function callAi(
     await sleep(wait);
   }
 
+  // Full provider/model/status detail is for our own debugging only — never
+  // send it to the browser. Log it server-side, throw a clean message.
+  console.error("[callAi] all providers exhausted:", failures.join(" | "));
   throw new Error(
-    `All AI models are busy right now. Please try again in a moment. (${failures
-      .slice(-6)
-      .join(" | ")})`,
+    "We're getting unusually high demand right now. Please try again in a few minutes.",
   );
 }
 

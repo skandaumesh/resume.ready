@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import AtsAnalysis from "@/components/AtsAnalysis";
 import { AtsResult } from "@/lib/ats";
@@ -34,6 +34,38 @@ export default function LinkedInReview({
   const [adviceLoading, setAdviceLoading] = useState(false);
   const [adviceError, setAdviceError] = useState<string | null>(null);
   const [lastFile, setLastFile] = useState<File | null>(null);
+  const coachRef = useRef<HTMLDivElement>(null);
+
+  // The uploaded PDF is never stored anywhere (server or client) — only the
+  // already-computed score/advice below, so a refresh restores the report
+  // without re-reading the file, keeping the "we don't save it" promise.
+  const storageKey = `linkedin-review:${analyzeEndpoint}`;
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved.result) setResult(saved.result);
+      if (saved.advice) setAdvice(saved.advice);
+    } catch {
+      /* corrupt or unavailable storage — just start fresh */
+    }
+    // Only ever run once, on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (result) {
+        sessionStorage.setItem(storageKey, JSON.stringify({ result, advice }));
+      } else {
+        sessionStorage.removeItem(storageKey);
+      }
+    } catch {
+      /* storage full or unavailable — persistence is a nicety, not required */
+    }
+  }, [result, advice, storageKey]);
 
   async function fetchAdvice(file: File) {
     setAdvice(null);
@@ -129,7 +161,7 @@ export default function LinkedInReview({
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+            className="btn-gradient rounded-[11px] px-5 py-2.5 text-sm font-semibold disabled:opacity-60"
           >
             {uploading ? "Analyzing…" : "Upload profile PDF"}
           </button>
@@ -172,6 +204,35 @@ export default function LinkedInReview({
               }
             />
           )}
+
+          {/* The AI Coach panel sits far below the ATS breakdown — bump it here
+              so it isn't missed on a long scroll. */}
+          {(advice || adviceLoading) && (
+            <button
+              type="button"
+              onClick={() =>
+                coachRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
+              className="soft-surface mt-4 flex w-full items-center justify-between gap-3 rounded-[13px] px-5 py-4 text-left transition hover:brightness-95"
+            >
+              <span className="flex min-w-0 items-center gap-2.5">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 shrink-0 text-stone-500">
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.71 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z"
+                  />
+                </svg>
+                <span className="truncate text-sm font-semibold leading-none text-stone-800">
+                  {adviceLoading
+                    ? "AI Coach is writing your personalized rewrites…"
+                    : `AI Coach: ${advice?.suggestions.length ?? 0} ready-to-paste rewrites below`}
+                </span>
+              </span>
+              <span className="shrink-0 text-sm font-semibold leading-none text-[#3385f9]">View ↓</span>
+            </button>
+          )}
+
           <AtsAnalysis key={result.fileName} result={result.ats} />
         </div>
       )}
@@ -183,11 +244,13 @@ export default function LinkedInReview({
 
       {/* AI coach: personalized, ready-to-paste rewrites */}
       {result && (
-        <div className="mt-6 glass-card p-5 sm:p-7">
+        <div ref={coachRef} className="glass-card mt-6 scroll-mt-24 p-5 sm:p-7">
           <div className="flex items-center justify-between gap-3">
             <h2 className="flex items-center gap-3 text-xl font-extrabold uppercase tracking-wide text-stone-800">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-lg shadow-sm ring-1 ring-stone-200">
-                ✨
+              <span className="soft-surface flex h-10 w-10 items-center justify-center rounded-[11px] text-stone-600">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                  <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" />
+                </svg>
               </span>
               AI Coach
             </h2>

@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import AppHeader from "@/components/AppHeader";
+import AppHeader, { APP_SIDEBAR_WIDTH_CLASS } from "@/components/AppHeader";
 import TagsInput from "@/components/TagsInput";
 import { UNIVERSAL_QUESTIONS, Question } from "@/lib/roles";
 import { renderResumeHtml } from "@/lib/resumeHtml";
@@ -158,6 +158,7 @@ export default function EditResumePage() {
   const lastSavedRef = useRef<string>("");
   const [generated, setGenerated] = useState<ResumeContent | null>(null);
   const [step, setStep] = useState(0);
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -494,15 +495,22 @@ export default function EditResumePage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen flex-col">
+      <div className={`flex h-screen flex-col ${APP_SIDEBAR_WIDTH_CLASS}`}>
         <AppHeader />
-        <p className="flex flex-1 items-center justify-center text-stone-500">Loading…</p>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="btn-gradient flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg">
+            <svg className="h-7 w-7 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+              <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
+        </div>
       </div>
     );
   }
   if (error && !roleTitle) {
     return (
-      <div className="flex h-screen flex-col">
+      <div className={`flex h-screen flex-col ${APP_SIDEBAR_WIDTH_CLASS}`}>
         <AppHeader />
         <p className="flex flex-1 items-center justify-center text-red-600">{error}</p>
       </div>
@@ -516,67 +524,115 @@ export default function EditResumePage() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      {/* Sub-header with resume title & role */}
-      <div className="shrink-0 border-b border-white/40 bg-white/30 px-4 py-3 backdrop-blur-sm sm:px-6">
-        <div className="mx-auto flex max-w-screen-2xl items-center gap-3">
-          <Link
-            href="/dashboard"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-300 bg-white/70 text-stone-600 hover:bg-white"
-            aria-label="Back to dashboard"
-          >
-            ←
-          </Link>
-          <div className="min-w-0">
-            <h1 className="truncate text-lg font-bold text-stone-900">Your resume</h1>
-            <p className="truncate text-xs text-stone-500">Target role: {roleTitle}</p>
-          </div>
-          <button
-            onClick={() => setMobilePreviewOpen(true)}
-            className="ml-auto flex shrink-0 items-center gap-1.5 rounded-xl bg-stone-900 px-3.5 py-2 text-xs font-semibold text-white shadow lg:hidden"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Preview
-          </button>
-        </div>
+      {/* Mobile-only bar — desktop uses the steps nav for back/collapse and a
+          floating button for preview, so this is unneeded above lg. */}
+      <div className="flex shrink-0 items-center gap-3 border-b border-white/40 bg-white/30 px-4 py-3 backdrop-blur-sm sm:px-6 lg:hidden">
+        <Link
+          href="/dashboard"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-300 bg-white/70 text-stone-600 hover:bg-white"
+          aria-label="Back to dashboard"
+        >
+          ←
+        </Link>
+        <p className="min-w-0 flex-1 truncate text-xs text-stone-500">Target role: {roleTitle}</p>
+        <button
+          onClick={() => setMobilePreviewOpen(true)}
+          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-stone-900 px-3.5 py-2 text-xs font-semibold text-white shadow"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Preview
+        </button>
       </div>
 
       {/* ── MAIN LAYOUT ───────────────────────────────────── */}
       <main className="flex min-h-0 flex-1 overflow-hidden p-3 sm:p-5">
         <div className="mx-auto flex h-full w-full max-w-[1800px] flex-col gap-3 lg:flex-row lg:gap-6">
-          {/* ── LEFT: steps nav ─────────────────────────────── */}
-          <nav className="hidden w-64 shrink-0 flex-col overflow-y-auto lg:flex glass-card p-4">
-          <div className="h-full overflow-y-auto pr-2">
-            <ol className="flex flex-col gap-1">
-              {STEPS.map((s, i) => {
-                const active = i === step;
-                return (
-                  <li key={s.key}>
-                    <button
-                      onClick={() => goTo(i)}
-                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
-                        active
-                          ? "bg-brand-600 text-white shadow"
-                          : "text-stone-600 hover:bg-white/70"
-                      }`}
-                    >
-                      <span
-                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                          active ? "bg-white text-brand-700" : "bg-stone-200 text-stone-600"
+          {/* ── LEFT: steps nav — collapsible like the dashboard sidebar ── */}
+          <nav
+            className="hidden shrink-0 flex-col overflow-y-auto lg:flex glass-card p-4 transition-[width] duration-300"
+            style={{ width: navCollapsed ? "76px" : "256px" }}
+          >
+            <div className="mb-3 flex items-center gap-2">
+              {!navCollapsed && (
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-stone-700" title={roleTitle}>
+                  {roleTitle}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={() => setNavCollapsed((c) => !c)}
+                title={navCollapsed ? "Expand" : "Collapse"}
+                className="soft-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] transition hover:brightness-95"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.125"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`h-4 w-auto ${navCollapsed ? "-scale-x-100" : ""}`}
+                  aria-hidden="true"
+                >
+                  <rect width="18" height="18" x="3" y="3" rx="2" />
+                  <path d="M9 3v18" />
+                  <path d="m16 15-3-3 3-3" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="h-full overflow-y-auto pr-2">
+              <ol className="flex flex-col gap-1">
+                {STEPS.map((s, i) => {
+                  const active = i === step;
+                  return (
+                    <li key={s.key}>
+                      <button
+                        onClick={() => goTo(i)}
+                        title={s.label}
+                        className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
+                          navCollapsed ? "justify-center border-transparent" : ""
+                        } ${
+                          !navCollapsed && active
+                            ? "border-blue-200 bg-blue-50 text-[#3385f9]"
+                            : navCollapsed
+                              ? "text-stone-500 hover:bg-stone-100 hover:text-stone-900"
+                              : "border-transparent text-stone-500 hover:bg-stone-100 hover:text-stone-900"
                         }`}
                       >
-                        {i + 1}
-                      </span>
-                      <span className="whitespace-nowrap font-medium">{s.label}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
-        </nav>
+                        <span
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center text-xs font-bold ${
+                            active ? "rounded-[8px] bg-[#3385f9] text-white" : "rounded-full bg-stone-200 text-stone-600"
+                          }`}
+                        >
+                          {i + 1}
+                        </span>
+                        {!navCollapsed && <span className="whitespace-nowrap font-medium">{s.label}</span>}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+
+            {/* Back button, pinned below the tabs */}
+            <Link
+              href="/dashboard"
+              title="Back to dashboard"
+              className={`soft-surface mt-3 flex shrink-0 items-center gap-2 rounded-[11px] px-3 py-2.5 text-sm font-medium text-stone-700 transition hover:brightness-95 ${
+                navCollapsed ? "justify-center" : ""
+              }`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
+                <path d="M19 12H5" />
+                <path d="m12 19-7-7 7-7" />
+              </svg>
+              {!navCollapsed && "Back to dashboard"}
+            </Link>
+          </nav>
 
         {/* Mobile stepper — compact chips (label only on active) + progress bar */}
         <div className="shrink-0 lg:hidden">
@@ -625,8 +681,9 @@ export default function EditResumePage() {
         </div>
 
         {/* ── CENTER: current step form ─────────────────────── */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="glass-card flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-6">
+        <div className="flex min-h-0 min-w-0 flex-col lg:w-[440px] lg:shrink lg:grow-0">
+          <div className="glass-card flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#f7f6f3] p-4 sm:p-6">
+            <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
             {current.key === "personal" && (
               <>
                 <h2 className="text-xl font-bold text-stone-900">Personal details</h2>
@@ -921,7 +978,7 @@ export default function EditResumePage() {
                 <button
                   onClick={generate}
                   disabled={generating}
-                  className="mt-4 w-full rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto"
+                  className="btn-gradient mt-4 w-full rounded-[11px] px-5 py-3 font-semibold disabled:opacity-50 sm:w-auto"
                 >
                   {generating
                     ? "Generating… (up to a minute)"
@@ -938,16 +995,10 @@ export default function EditResumePage() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     <a
                       href={`/api/resumes/${id}/pdf`}
-                      className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-800"
+                      className="btn-gradient rounded-[11px] px-4 py-2 text-sm font-semibold"
                     >
                       Download PDF
                     </a>
-                    <Link
-                      href={`/resume/${id}/preview`}
-                      className="rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
-                    >
-                      Full ATS score and job match
-                    </Link>
                   </div>
                 )}
               </>
@@ -963,31 +1014,32 @@ export default function EditResumePage() {
                 <button
                   onClick={() => goTo(step - 1)}
                   disabled={step === 0}
-                  className="rounded-xl border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-40 sm:py-2.5"
+                  className="soft-surface rounded-[11px] px-5 py-3 text-sm font-medium text-stone-700 transition hover:brightness-95 disabled:opacity-40 sm:py-2.5"
                 >
                   Back
                 </button>
                 {!isFinish && (
                   <button
                     onClick={() => goTo(step + 1)}
-                    className="flex-1 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700 sm:flex-none sm:py-2.5"
+                    className="btn-gradient flex-1 rounded-[11px] px-6 py-3 text-sm font-semibold sm:flex-none sm:py-2.5"
                   >
                     Next →
                   </button>
                 )}
               </div>
             </div>
+            </div>
           </div>
         </div>
 
         {/* ── RIGHT: live preview ───────────────────────────── */}
-        <div className="hidden min-h-0 w-[42%] max-w-[720px] min-w-[440px] shrink-0 flex-col lg:flex">
-          <div className="glass-card flex min-h-0 flex-1 flex-col p-4 sm:p-5">
+        <div className="hidden min-h-0 min-w-0 flex-1 flex-col lg:flex">
+          <div className="glass-card flex min-h-0 flex-1 flex-col bg-[#f7f6f3] p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-3">
               <div className="ml-auto flex items-center gap-3">
                 <button
                   onClick={() => setGalleryOpen(true)}
-                  className="flex items-center gap-2 rounded-xl bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800"
+                  className="soft-surface flex items-center gap-2 rounded-[11px] px-4 py-2 text-sm font-semibold text-stone-700 transition hover:brightness-95"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4l2 2h4a2 2 0 012 2v3M3 15l3.5-3.5a2 2 0 012.8 0L14 16m-2-2l1.5-1.5a2 2 0 012.8 0L21 16M15 8h.01" />

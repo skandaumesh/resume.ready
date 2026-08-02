@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import AppHeader from "@/components/AppHeader";
+import AppShell from "@/components/AppShell";
 import JobMatchPanel from "@/components/JobMatchPanel";
 import { computeJobMatch } from "@/lib/jobMatch";
 import { renderResumeHtml } from "@/lib/resumeHtml";
@@ -125,8 +125,7 @@ export default function JdEnhancerPage() {
   const tailoredMatch = result ? computeJobMatch(result.tailored, result.jobDescription) : null;
 
   return (
-    <div className="min-h-screen">
-      <AppHeader />
+    <AppShell>
       <main className="mx-auto max-w-screen-lg px-4 py-8 sm:px-6">
         <div>
           <h1 className="text-2xl font-bold text-stone-900">JD Enhancer</h1>
@@ -137,19 +136,19 @@ export default function JdEnhancerPage() {
         </div>
 
         {/* Source toggle */}
-        <div className="mt-6 inline-flex rounded-xl border border-stone-200 bg-white/70 p-1">
+        <div className="soft-surface mt-6 inline-flex rounded-[13px] p-1">
           <button
             onClick={() => setMode("saved")}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-              mode === "saved" ? "bg-brand-600 text-white" : "text-stone-600 hover:text-stone-900"
+            className={`rounded-[9px] px-4 py-1.5 text-sm font-medium transition ${
+              mode === "saved" ? "btn-gradient" : "text-stone-600 hover:text-stone-900"
             }`}
           >
             Saved resume
           </button>
           <button
             onClick={() => setMode("upload")}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-              mode === "upload" ? "bg-brand-600 text-white" : "text-stone-600 hover:text-stone-900"
+            className={`rounded-[9px] px-4 py-1.5 text-sm font-medium transition ${
+              mode === "upload" ? "btn-gradient" : "text-stone-600 hover:text-stone-900"
             }`}
           >
             Upload resume + JD
@@ -219,7 +218,7 @@ export default function JdEnhancerPage() {
                   </label>
                   <button
                     onClick={() => resumeRef.current?.click()}
-                    className="mt-2 w-full rounded-xl border border-stone-300 bg-white/80 px-4 py-2.5 text-sm font-medium text-stone-700 hover:bg-white"
+                    className="soft-surface mt-2 w-full rounded-[11px] px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:brightness-95"
                   >
                     {resumeFile ? resumeFile.name : "Choose resume file"}
                   </button>
@@ -239,7 +238,7 @@ export default function JdEnhancerPage() {
                   </label>
                   <button
                     onClick={() => jobRef.current?.click()}
-                    className="mt-2 w-full rounded-xl border border-stone-300 bg-white/80 px-4 py-2.5 text-sm font-medium text-stone-700 hover:bg-white"
+                    className="soft-surface mt-2 w-full rounded-[11px] px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:brightness-95"
                   >
                     {jobFile ? jobFile.name : "Choose JD file"}
                   </button>
@@ -268,7 +267,7 @@ export default function JdEnhancerPage() {
                 <button
                   onClick={runEnhance}
                   disabled={running}
-                  className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+                  className="btn-gradient rounded-[11px] px-5 py-2.5 font-semibold disabled:opacity-50"
                 >
                   {running ? "Checking & enhancing… (up to a minute)" : "Check & enhance"}
                 </button>
@@ -303,13 +302,13 @@ export default function JdEnhancerPage() {
                       <div className="mt-4 flex flex-wrap gap-2">
                         <Link
                           href={`/resume/${result.savedId}/preview`}
-                          className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+                          className="btn-gradient rounded-[11px] px-4 py-2 text-sm font-semibold"
                         >
                           View & download
                         </Link>
                         <Link
                           href={`/resume/${result.savedId}/edit`}
-                          className="rounded-xl border border-stone-300 bg-white/70 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-white"
+                          className="soft-surface rounded-[11px] px-4 py-2 text-sm font-medium text-stone-700 transition hover:brightness-95"
                         >
                           Edit
                         </Link>
@@ -357,6 +356,6 @@ export default function JdEnhancerPage() {
           </>
         )}
       </main>
-    </div>
+    </AppShell>
   );
 }

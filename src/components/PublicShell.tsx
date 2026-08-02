@@ -1,102 +1,73 @@
 import Link from "next/link";
+import Footer from "@/components/Footer";
 
-const INK = "#1b1710";
-const LIME = "#d9f24e";
+const NAV_LINKS = [
+  { href: "/ats-check", label: "ATS Check", className: "sm:block" },
+  { href: "/roast", label: "Roast", className: "sm:block" },
+  { href: "/linkedin-check", label: "LinkedIn", className: "md:block" },
+  { href: "/examples", label: "Examples", className: "lg:block" },
+];
 
 // Chrome for the public (no-login) tool pages: /ats-check, /roast, /examples.
-// Same design language as the dashboard: sage background (global), frosted
-// glass header capsule, ink/lime accents.
+// Same system as the landing page: warm off-white canvas, hairline borders,
+// greyscale type with a single blue action colour.
 export default function PublicShell({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen text-stone-900">
-      <header className="sticky top-0 z-40 px-3 pt-3">
-        <div className="mx-auto flex max-w-screen-xl items-center justify-between gap-2 rounded-2xl bg-white/45 px-4 py-2.5 shadow-[0_12px_32px_-18px_rgba(27,23,16,0.3)] ring-1 ring-white/60 backdrop-blur-xl">
-          <Link href="/" className="flex shrink-0 items-center gap-1.5">
-            <span className="relative flex h-2.5 w-2.5">
-              <span
-                className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
-                style={{ backgroundColor: LIME }}
-              />
-              <span
-                className="relative inline-flex h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: INK }}
-              />
-            </span>
-            <span className="text-base font-extrabold tracking-tight">
-              ResumeReady
-            </span>
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-40 border-b border-hairline bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-2 px-5 py-3.5 sm:px-8">
+          <Link href="/" className="flex shrink-0 items-center">
+            <img
+              src="/logo-clean.png"
+              alt="ResumeReady"
+              className="h-6 w-auto"
+            />
           </Link>
-          <nav className="flex items-center gap-1 text-sm font-semibold sm:gap-2">
-            <Link
-              href="/ats-check"
-              className="hidden rounded-full px-3.5 py-2 text-stone-500 transition hover:bg-white/70 hover:text-stone-900 sm:block"
-            >
-              ATS Check
+          <nav className="flex items-center gap-1 text-sm">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`hidden rounded-full px-3.5 py-2 text-[15px] font-semibold text-content-primary transition hover:bg-canvas-deep hover:text-content-strong ${l.className}`}
+              >
+                {l.label}
+              </Link>
+            ))}
+            <Link href="/sign-in" className="composer-btn px-3.5 py-2 text-sm">
+              Log in
             </Link>
-            <Link
-              href="/roast"
-              className="hidden rounded-full px-3.5 py-2 text-stone-500 transition hover:bg-white/70 hover:text-stone-900 sm:block"
-            >
-              Roast
-            </Link>
-            <Link
-              href="/linkedin-check"
-              className="hidden rounded-full px-3.5 py-2 text-stone-500 transition hover:bg-white/70 hover:text-stone-900 md:block"
-            >
-              LinkedIn
-            </Link>
-            <Link
-              href="/examples"
-              className="hidden rounded-full px-3.5 py-2 text-stone-500 transition hover:bg-white/70 hover:text-stone-900 lg:block"
-            >
-              Examples
-            </Link>
-            <Link
-              href="/sign-up"
-              className="rounded-full px-5 py-2 font-bold text-[#faf6ee] transition hover:-translate-y-0.5"
-              style={{ backgroundColor: INK }}
-            >
+            <Link href="/sign-up" className="composer-btn px-3.5 py-2 text-sm">
               Get started
             </Link>
           </nav>
         </div>
       </header>
 
-      <main className="mx-auto max-w-screen-lg px-5 pb-16 pt-8 sm:px-8">
+      <main className="mx-auto max-w-4xl px-5 pb-16 pt-10 sm:px-8">
         {children}
       </main>
 
       {/* conversion band */}
-      <section className="mx-auto max-w-screen-lg px-5 pb-16 sm:px-8">
-        <div
-          className="rounded-[28px] px-8 py-12 text-center"
-          style={{ backgroundColor: INK }}
-        >
-          <h2 className="text-2xl font-extrabold tracking-tight text-[#faf6ee] sm:text-4xl">
+      <section className="mx-auto max-w-4xl px-5 pb-20 sm:px-8">
+        <div className="glass-card px-8 py-14 text-center">
+          <h2 className="text-[28px] font-semibold tracking-[-0.02em] sm:text-[32px]">
             Fix everything this found, free.
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-stone-400">
+          <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-content-muted">
             ResumeReady rewrites your plain sentences into a polished,
             ATS-friendly resume in about 10 minutes. Built for Indian students.
           </p>
-          <Link
-            href="/sign-up"
-            className="mt-7 inline-block rounded-full px-9 py-4 text-base font-bold text-stone-900 transition hover:-translate-y-0.5"
-            style={{ backgroundColor: LIME }}
-          >
+          <Link href="/sign-up" className="btn-primary mt-8">
             Build my resume for free
           </Link>
         </div>
       </section>
 
-      <footer className="border-t border-stone-900/10 py-8 text-center text-sm text-stone-400">
-        © {new Date().getFullYear()} ResumeReady. Made for students, by
-        students.
-      </footer>
+      <Footer />
     </div>
   );
 }

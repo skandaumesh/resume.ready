@@ -1,14 +1,13 @@
 "use client";
 
-import AppHeader from "@/components/AppHeader";
+import AppShell from "@/components/AppShell";
 import LinkedInReview from "@/components/LinkedInReview";
 
 // Signed-in LinkedIn review — same flow as the public /linkedin-check page,
 // but on the user's much higher daily AI budget.
 export default function LinkedInReviewPage() {
   return (
-    <div className="min-h-screen">
-      <AppHeader />
+    <AppShell>
       <main className="mx-auto max-w-screen-xl px-4 py-8 sm:px-6">
         <div>
           <h1 className="text-2xl font-bold text-stone-900">
@@ -24,6 +23,6 @@ export default function LinkedInReviewPage() {
           suggestEndpoint="/api/linkedin/suggest"
         />
       </main>
-    </div>
+    </AppShell>
   );
 }

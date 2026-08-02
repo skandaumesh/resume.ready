@@ -3,7 +3,7 @@ import Link from "next/link";
 import PublicShell from "@/components/PublicShell";
 import { ROLES } from "@/lib/roles";
 
-const LIME = "#d9f24e";
+const LIME = "#dbeafe"; // blue-100 highlight
 
 export const metadata: Metadata = {
   title: "Fresher Resume Examples by Role (2026) | ResumeReady",

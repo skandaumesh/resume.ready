@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { searchRoles, ROLES } from "@/lib/roles";
-import AppHeader from "@/components/AppHeader";
+import AppShell from "@/components/AppShell";
 
 export default function NewResumePage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const suggestions = useMemo(() => searchRoles(query, 8), [query]);
   const typed = query.trim();
@@ -21,27 +22,32 @@ export default function NewResumePage() {
   async function pickRole(role: string) {
     const value = role.trim();
     if (value.length < 2) return;
+    setError(null);
     setCreating(true);
-    const res = await fetch("/api/resumes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: value }),
-    });
-    if (res.ok) {
-      const { id } = await res.json();
-      router.push(`/resume/${id}/edit`);
-    } else {
+    try {
+      const res = await fetch("/api/resumes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: value }),
+      });
+      if (res.ok) {
+        const { id } = await res.json();
+        router.push(`/resume/${id}/edit`);
+      } else {
+        setCreating(false);
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || "Could not start a new resume. Please try again.");
+      }
+    } catch {
       setCreating(false);
-      const data = await res.json().catch(() => ({}));
-      alert(data?.error || "Could not start a new resume. Please try again.");
+      setError("Request failed. Check your connection and try again.");
     }
   }
 
   const popular = ROLES.slice(0, 10);
 
   return (
-    <div className="min-h-screen">
-      <AppHeader />
+    <AppShell>
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <Link href="/dashboard" className="text-sm text-stone-500 hover:text-stone-800">
           ← Back to dashboard
@@ -124,7 +130,7 @@ export default function NewResumePage() {
                   key={r.slug}
                   onClick={() => pickRole(r.title)}
                   disabled={creating}
-                  className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:border-brand-400 disabled:opacity-60"
+                  className="soft-surface rounded-full px-4 py-2 text-sm font-medium text-stone-700 transition hover:brightness-95 disabled:opacity-60"
                 >
                   {r.title}
                 </button>
@@ -138,7 +144,11 @@ export default function NewResumePage() {
             Setting up your resume…
           </p>
         )}
+
+        {error && (
+          <p className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
+        )}
       </main>
-    </div>
+    </AppShell>
   );
 }

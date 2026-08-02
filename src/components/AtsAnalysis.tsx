@@ -1,17 +1,43 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AtsCategory, AtsCheck, AtsResult } from "@/lib/ats";
+
+function Icon({ path }: { path: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <path d={path} />
+    </svg>
+  );
+}
 
 // Icons per known category; anything unknown gets a sensible default, so any
 // tool that produces AtsResult-shaped checks can render this report.
-const CATEGORY_ICONS: Record<string, string> = {
-  Content: "📝",
-  Sections: "🧩",
-  "ATS Essentials": "🤖",
-  "Profile Basics": "👤",
-  Credibility: "🏆",
+const CATEGORY_ICONS: Record<string, ReactNode> = {
+  Content: <Icon path="M4 6h16M4 12h16M4 18h10" />,
+  Sections: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <rect x="3" y="3" width="8" height="8" rx="1.5" />
+      <rect x="13" y="3" width="8" height="5" rx="1.5" />
+      <rect x="13" y="11" width="8" height="10" rx="1.5" />
+      <rect x="3" y="14" width="8" height="7" rx="1.5" />
+    </svg>
+  ),
+  "ATS Essentials": <Icon path="M12 3a9 9 0 1 0 9 9M12 8v4l3 2M19 3l2 2-4 4-2-2z" />,
+  "Profile Basics": (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
+    </svg>
+  ),
+  Credibility: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+      <path d="M17 5h3a1 1 0 0 1 1 1 4 4 0 0 1-4 4M7 5H4a1 1 0 0 0-1 1 4 4 0 0 0 4 4" />
+    </svg>
+  ),
 };
+const DEFAULT_ICON = <Icon path="M6 4h9l3 3v13H6V4Z" />;
 
 function scoreColor(score: number): string {
   if (score >= 85) return "text-emerald-600";
@@ -56,7 +82,7 @@ function CheckCard({ check, delay }: { check: AtsCheck; delay: number }) {
 
   return (
     <div
-      className="animate-fade-up overflow-hidden rounded-2xl bg-white ring-1 ring-stone-200"
+      className="glass-card animate-fade-up overflow-hidden"
       style={{ animationDelay: `${delay}ms` }}
     >
       <button
@@ -109,13 +135,15 @@ function CheckCard({ check, delay }: { check: AtsCheck; delay: number }) {
                   className="animate-pop-in absolute -top-7 -translate-x-1/2"
                   style={{ left: `${Math.max(pct, 4)}%` }}
                 >
-                  <span
-                    className={`text-lg ${
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className={`h-5 w-5 ${
                       check.passed ? "text-emerald-500" : "text-red-400"
                     }`}
                   >
-                    📍
-                  </span>
+                    <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z" />
+                  </svg>
                 </div>
                 <div className="h-3 overflow-hidden rounded-full bg-stone-100 ring-1 ring-stone-200">
                   <div
@@ -170,7 +198,7 @@ export default function AtsAnalysis({ result }: { result: AtsResult }) {
       const earned = items.reduce((s, c) => s + c.earned, 0);
       return {
         key,
-        icon: CATEGORY_ICONS[key] ?? "📋",
+        icon: CATEGORY_ICONS[key] ?? DEFAULT_ICON,
         items,
         pct: max ? Math.round((earned / max) * 100) : 0,
         issues: items.filter((c) => !c.passed).length,
@@ -185,11 +213,20 @@ export default function AtsAnalysis({ result }: { result: AtsResult }) {
   const sectionRefs = useRef<Partial<Record<AtsCategory, HTMLElement | null>>>(
     {},
   );
+  // Per-check refs so the summary / sidebar can jump straight to a specific
+  // check's "why it's wrong + how to fix it" panel, not just its category.
+  const checkRefs = useRef<Partial<Record<string, HTMLElement | null>>>({});
+  const firstFailedId = checks.find((c) => !c.passed)?.id;
+
+  function goToCheck(category: AtsCategory, id: string) {
+    setOpenGroup(category);
+    checkRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[300px_1fr]">
       {/* ───────────────── Score sidebar ───────────────── */}
-      <aside className="animate-fade-up top-24 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200 lg:sticky">
+      <aside className="glass-card animate-fade-up top-24 p-6 lg:sticky">
         <h2 className="text-center text-2xl font-extrabold text-stone-900">
           Your Score
         </h2>
@@ -215,9 +252,22 @@ export default function AtsAnalysis({ result }: { result: AtsResult }) {
           </div>
         </div>
 
-        <p className="mt-3 text-center text-sm font-semibold text-stone-500">
-          {issues === 0 ? "No issues 🎉" : `${issues} issue${issues > 1 ? "s" : ""} to fix`}
-        </p>
+        {issues === 0 || !firstFailedId ? (
+          <p className="mt-3 text-center text-sm font-semibold text-stone-500">
+            No issues 🎉
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              const cat = checks.find((c) => c.id === firstFailedId)!.category;
+              goToCheck(cat, firstFailedId);
+            }}
+            className="mt-3 block w-full text-center text-sm font-semibold text-red-600 underline decoration-red-200 underline-offset-2 hover:text-red-700"
+          >
+            {issues} issue{issues > 1 ? "s" : ""} to fix — see what&apos;s wrong
+          </button>
+        )}
 
         {/* category accordion */}
         <div className="mt-6 space-y-1 border-t border-stone-100 pt-4">
@@ -260,29 +310,32 @@ export default function AtsAnalysis({ result }: { result: AtsResult }) {
                 <div className="overflow-hidden">
                   <ul className="space-y-1 px-2 pb-2 pt-1">
                     {g.items.map((c) => (
-                      <li
-                        key={c.id}
-                        className="flex items-center justify-between gap-2 py-1"
-                      >
-                        <span className="flex items-center gap-2 text-sm text-stone-700">
-                          <span
-                            className={
-                              c.passed ? "text-emerald-500" : "text-red-500"
-                            }
-                          >
-                            {c.passed ? "✓" : "✕"}
-                          </span>
-                          {c.label.replace(/\s*\(.*\)$/, "")}
-                        </span>
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            c.passed
-                              ? "bg-emerald-50 text-emerald-600"
-                              : "bg-red-50 text-red-600"
-                          }`}
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          onClick={() => goToCheck(g.key, c.id)}
+                          className="flex w-full items-center justify-between gap-2 rounded-md py-1 text-left hover:bg-stone-50"
                         >
-                          {c.passed ? "No issues" : "1 issue"}
-                        </span>
+                          <span className="flex items-center gap-2 text-sm text-stone-700">
+                            <span
+                              className={
+                                c.passed ? "text-emerald-500" : "text-red-500"
+                              }
+                            >
+                              {c.passed ? "✓" : "✕"}
+                            </span>
+                            {c.label.replace(/\s*\(.*\)$/, "")}
+                          </span>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              c.passed
+                                ? "bg-emerald-50 text-emerald-600"
+                                : "bg-red-50 text-red-600"
+                            }`}
+                          >
+                            {c.passed ? "No issues" : "1 issue"}
+                          </span>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -301,12 +354,12 @@ export default function AtsAnalysis({ result }: { result: AtsResult }) {
             ref={(el) => {
               sectionRefs.current[g.key] = el;
             }}
-            className="animate-fade-up scroll-mt-24 rounded-3xl bg-stone-50 p-5 ring-1 ring-stone-200 sm:p-7"
+            className="glass-card animate-fade-up scroll-mt-24 bg-stone-50 p-5 sm:p-7"
             style={{ animationDelay: `${gi * 120}ms` }}
           >
             <div className="flex items-center justify-between gap-3">
               <h3 className="flex items-center gap-3 text-xl font-extrabold uppercase tracking-wide text-stone-800">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-lg shadow-sm ring-1 ring-stone-200">
+                <span className="soft-surface flex h-10 w-10 items-center justify-center rounded-[11px] text-stone-600">
                   {g.icon}
                 </span>
                 {g.key}
@@ -326,7 +379,15 @@ export default function AtsAnalysis({ result }: { result: AtsResult }) {
 
             <div className="mt-5 space-y-4">
               {g.items.map((c, i) => (
-                <CheckCard key={c.id} check={c} delay={gi * 120 + i * 90} />
+                <div
+                  key={c.id}
+                  ref={(el) => {
+                    checkRefs.current[c.id] = el;
+                  }}
+                  className="scroll-mt-24"
+                >
+                  <CheckCard check={c} delay={gi * 120 + i * 90} />
+                </div>
               ))}
             </div>
           </section>

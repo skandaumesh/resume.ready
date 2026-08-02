@@ -107,6 +107,7 @@ export default function TemplateGallery({
   const [withPhoto, setWithPhoto] = useState<boolean>(
     !!options.photo || getTemplate(template).photo,
   );
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   if (!open) return null;
@@ -145,9 +146,10 @@ export default function TemplateGallery({
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 3 * 1024 * 1024) {
-      alert("Please choose an image under 3 MB.");
+      setPhotoError("Please choose an image under 3 MB.");
       return;
     }
+    setPhotoError(null);
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = String(reader.result);
@@ -305,6 +307,9 @@ export default function TemplateGallery({
               </>
             )}
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+            {photoError && (
+              <span className="text-xs font-medium text-red-600">{photoError}</span>
+            )}
           </div>
           <button
             onClick={onClose}

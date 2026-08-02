@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import PublicShell from "@/components/PublicShell";
 import { AtsResult } from "@/lib/ats";
 
-const INK = "#1b1710";
-const LIME = "#d9f24e";
+const INK = "#2563eb";
+const LIME = "#dbeafe"; // blue-100 highlight
 
 function ringHex(score: number): string {
   if (score >= 85) return "#10b981";
@@ -67,8 +67,7 @@ function Report({ result, locked }: { result: AtsResult; locked: number }) {
           {failed.length > 0 && (
             <Link
               href="/sign-up"
-              className="mt-4 inline-block rounded-full px-6 py-3 text-sm font-bold text-stone-900 transition hover:-translate-y-0.5"
-              style={{ backgroundColor: LIME }}
+              className="btn-primary mt-4"
             >
               Unlock all {locked} fixes, free
             </Link>
@@ -170,7 +169,7 @@ export default function PublicAtsCheckPage() {
           <button
             onClick={() => fileRef.current?.click()}
             disabled={busy}
-            className="rounded-full px-9 py-4 text-base font-bold text-[#faf6ee] shadow-[4px_4px_0_0_#d9f24e] transition hover:-translate-y-0.5 disabled:opacity-60"
+            className="rounded-full px-9 py-4 text-base font-bold text-white  transition hover:-translate-y-0.5 disabled:opacity-60"
             style={{ backgroundColor: INK }}
           >
             {busy ? "Reading your resume…" : "Upload my resume (.pdf, .docx)"}

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { renderResumeHtml } from "@/lib/resumeHtml";
 import { EMPTY_CONTENT, ResumeContent, ContactInfo } from "@/lib/types";
 import { DEFAULT_TEMPLATE, isTemplateId } from "@/lib/templates";
-import AppHeader from "@/components/AppHeader";
+import AppHeader, { APP_SIDEBAR_WIDTH_CLASS } from "@/components/AppHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ export default async function PreviewPage({
 
   if (!resume || resume.userId !== userId) {
     return (
-      <div className="min-h-screen">
+      <div className={`min-h-screen ${APP_SIDEBAR_WIDTH_CLASS}`}>
         <AppHeader />
         <p className="mx-auto max-w-3xl px-4 py-16 text-center text-red-600">
           Resume not found.
@@ -41,7 +41,7 @@ export default async function PreviewPage({
   const html = renderResumeHtml(contact, content, template);
 
   return (
-    <div className="min-h-screen">
+    <div className={`min-h-screen ${APP_SIDEBAR_WIDTH_CLASS}`}>
       <AppHeader />
       <main className="mx-auto max-w-screen-2xl px-4 py-6 sm:px-6">
         <div>

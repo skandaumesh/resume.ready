@@ -97,6 +97,29 @@ export function renderResumeHtml(
     )
     .join("");
 
+  // Vertical-rail variant used only by the "timeline" layout: each entry gets
+  // a dot on a connecting line instead of a plain stacked block.
+  const timelineExperienceHtml = content.experience
+    .map(
+      (e, i) => `
+      <div class="tl-item">
+        <div class="tl-rail">
+          <span class="tl-dot"></span>
+          ${i < content.experience.length - 1 ? '<span class="tl-line"></span>' : ""}
+        </div>
+        <div class="tl-content">
+          <div class="entry-head">
+            <span class="entry-title">${esc(e.title)}${
+              e.organization ? `, ${esc(e.organization)}` : ""
+            }</span>
+            <span class="entry-date">${esc(e.duration)}</span>
+          </div>
+          ${bulletList(e.bullets)}
+        </div>
+      </div>`,
+    )
+    .join("");
+
   const projectsHtml = content.projects
     .map(
       (p) => `
@@ -143,7 +166,10 @@ export function renderResumeHtml(
       content.summary ? `<p class="summary">${esc(content.summary)}</p>` : "",
     ),
     skills: section("Skills", skillsHtml),
-    experience: section("Experience", experienceHtml),
+    experience: section(
+      "Experience",
+      tpl.layout === "timeline" ? `<div class="tl-track">${timelineExperienceHtml}</div>` : experienceHtml,
+    ),
     projects: section("Projects", projectsHtml),
     education: section("Education", educationHtml),
     certifications: section("Certifications", bulletList(content.certifications)),
@@ -162,6 +188,7 @@ export function renderResumeHtml(
   for (const k of SECTION_KEYS) if (!seen.has(k)) order.push(k);
 
   const isSidebar = tpl.layout === "sidebar-left" || tpl.layout === "sidebar-right";
+  const isHighlight = tpl.layout === "highlight-grid";
 
   const contact_ = contact as Partial<ContactInfo> & Record<string, string | undefined>;
   const parts = contactParts(contact_);
@@ -172,7 +199,54 @@ export function renderResumeHtml(
 
   let bodyHtml: string;
 
-  if (isSidebar) {
+  if (isHighlight) {
+    // Two-column layout: left carries the narrative sections, right stacks
+    // education, an icon-accented achievements panel, and skill pills.
+    const leftKeys: SectionKey[] = ["summary", "experience", "projects", "certifications"];
+    const leftHtml = order
+      .filter((k) => leftKeys.includes(k))
+      .map((k) => sectionHtmlByKey[k])
+      .join("\n    ");
+    const rightTopHtml = order
+      .filter((k) => k === "education")
+      .map((k) => sectionHtmlByKey[k])
+      .join("\n    ");
+
+    const cleanAchievements = content.achievements.filter((a) => a && a.trim());
+    const achievementsHtml = cleanAchievements.length
+      ? `<section class="achv">
+          <h2>Key Achievements</h2>
+          <div class="achv-grid">
+            ${cleanAchievements
+              .map((a) => `<div class="achv-card"><span class="achv-dot"></span><p>${esc(a)}</p></div>`)
+              .join("")}
+          </div>
+        </section>`
+      : "";
+
+    const skillPillsHtml = content.skills.length
+      ? `<section class="pills">
+          <h2>Skills</h2>
+          <div class="pill-row">${content.skills.map((s) => `<span class="pill">${esc(s)}</span>`).join("")}</div>
+        </section>`
+      : "";
+
+    const roleLine = content.experience[0]?.title
+      ? `<div class="role-line">${esc(content.experience[0].title)}</div>`
+      : "";
+
+    bodyHtml = `<div class="page highlight">
+      <header class="highlight-head">
+        <h1>${name}</h1>
+        ${roleLine}
+        <div class="contact">${parts.join("  •  ")}</div>
+      </header>
+      <div class="highlight-body">
+        <div class="highlight-left">${leftHtml}</div>
+        <div class="highlight-right">${rightTopHtml}${achievementsHtml}${skillPillsHtml}</div>
+      </div>
+    </div>`;
+  } else if (isSidebar) {
     // Sidebar holds identity + contact + skills + certifications; main holds
     // the rest in the chosen order.
     const sideKeys: SectionKey[] = ["skills", "certifications"];
@@ -256,7 +330,7 @@ const BASE_CSS = `
 `;
 
 function styleFor(
-  layout: "single" | "band" | "sidebar-left" | "sidebar-right",
+  layout: "single" | "band" | "sidebar-left" | "sidebar-right" | "highlight-grid" | "timeline",
   align: "left" | "center",
   accent: string,
   fontStack: string,
@@ -297,6 +371,39 @@ function styleFor(
   .photo { width: 74px; height: 74px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.7); flex-shrink: 0; }
   .photo-fallback { display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.2); color: #fff; font-size: 26px; font-weight: 700; }
   h2 { color: ${accent}; }`;
+  }
+
+  if (layout === "highlight-grid") {
+    return `${common}
+  h2 { color: #111; border-bottom: 2px solid #111; }
+  .page.highlight { max-width: 860px; margin: 0 auto; padding: 36px 40px 40px; }
+  .highlight-head h1 { font-size: 25pt; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: #111; }
+  .highlight-head .role-line { color: ${accent}; font-weight: 600; font-size: 11pt; margin-top: 4px; }
+  .highlight-head .contact { font-size: 9.5pt; color: #444; margin-top: 6px; }
+  .highlight-body { display: flex; gap: 32px; margin-top: 16px; align-items: flex-start; }
+  .highlight-left { width: 62%; }
+  .highlight-right { width: 38%; }
+  .highlight-right section { margin-top: 0; margin-bottom: 20px; }
+  .achv-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+  .achv-card { display: flex; gap: 8px; align-items: flex-start; }
+  .achv-dot { flex-shrink: 0; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: ${accent}; }
+  .achv-card p { margin: 0; font-size: 9.5pt; color: #333; }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; background: ${accent}1a; color: ${accent}; font-size: 9pt; font-weight: 600; }`;
+  }
+
+  if (layout === "timeline") {
+    return `${common}
+  .page { max-width: 820px; margin: 0 auto; padding: 40px 44px; }
+  header { text-align: left; border-bottom: 2px solid ${accent}; padding-bottom: 10px; }
+  header h1 { font-size: 22pt; letter-spacing: 0.4px; color: ${accent}; }
+  header .contact { font-size: 9.5pt; color: #444; margin-top: 4px; }
+  .tl-track { margin-top: 2px; }
+  .tl-item { display: flex; gap: 14px; }
+  .tl-rail { display: flex; flex-direction: column; align-items: center; width: 9px; flex-shrink: 0; }
+  .tl-dot { width: 9px; height: 9px; border-radius: 50%; background: ${accent}; flex-shrink: 0; margin-top: 3px; }
+  .tl-line { flex: 1; width: 2px; background: ${accent}33; margin-top: 2px; }
+  .tl-content { flex: 1; padding-bottom: 14px; }`;
   }
 
   // single column (classic / modern / minimal, etc.)

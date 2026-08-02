@@ -1,6 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Inter_Tight } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { authLocalization, globalClerkAppearance } from "@/components/authAppearance";
 import "./globals.css";
+
+const interTight = Inter_Tight({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "ResumeReady: Internship-ready resumes in 10 minutes",
@@ -21,14 +30,10 @@ export default function RootLayout({
   return (
     <ClerkProvider
       afterSignOutUrl="/"
-      appearance={{
-        variables: {
-          colorPrimary: "#1b1710",
-          borderRadius: "14px",
-        },
-      }}
+      localization={authLocalization}
+      appearance={globalClerkAppearance}
     >
-      <html lang="en">
+      <html lang="en" className={interTight.variable}>
         <body>{children}</body>
       </html>
     </ClerkProvider>

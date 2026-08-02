@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import PublicShell from "@/components/PublicShell";
 
-const INK = "#1b1710";
-const LIME = "#d9f24e";
+const INK = "#2563eb"; // primary action
+const LIME = "#dbeafe"; // blue-100 highlight
+const PANEL = "#171717"; // the roast itself sits on a dark block for contrast
 
 interface Roast {
   roast: string[];
@@ -81,7 +82,7 @@ export default function RoastPage() {
           <button
             onClick={() => fileRef.current?.click()}
             disabled={busy}
-            className="rounded-full px-9 py-4 text-base font-bold text-[#faf6ee] shadow-[4px_4px_0_0_#d9f24e] transition hover:-translate-y-0.5 disabled:opacity-60"
+            className="rounded-full px-9 py-4 text-base font-bold text-white  transition hover:-translate-y-0.5 disabled:opacity-60"
             style={{ backgroundColor: INK }}
           >
             {busy ? "Roasting… 🔥" : "Roast my resume (.pdf, .docx)"}
@@ -109,10 +110,10 @@ export default function RoastPage() {
         <div className="animate-fade-up mt-10">
           {/* the roast */}
           <div
-            className="rounded-3xl p-8 text-left shadow-xl sm:p-10"
-            style={{ backgroundColor: INK }}
+            className="rounded-panel p-8 text-left sm:p-10"
+            style={{ backgroundColor: PANEL }}
           >
-            <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: LIME }}>
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/50">
               The verdict 🔥
             </p>
             <div className="mt-4 space-y-4">
@@ -165,7 +166,7 @@ export default function RoastPage() {
             </ul>
             <Link
               href="/sign-up"
-              className="mt-6 inline-block rounded-full px-7 py-3.5 text-sm font-bold text-[#faf6ee] transition hover:-translate-y-0.5"
+              className="mt-6 inline-block rounded-full px-7 py-3.5 text-sm font-bold text-white transition hover:-translate-y-0.5"
               style={{ backgroundColor: INK }}
             >
               Fix all of this in 10 minutes, free

@@ -89,7 +89,7 @@ export default function EntryList({
               <button
                 type="button"
                 onClick={() => setOpenIdx(open ? -1 : i)}
-                className="flex flex-1 items-center gap-2 text-left"
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
               >
                 <svg
                   className={`h-4 w-4 shrink-0 text-stone-400 transition-transform ${open ? "rotate-180" : ""}`}

@@ -6,8 +6,8 @@ import { getRoleExample, allExampleSlugs } from "@/lib/roleExamples";
 import { renderResumeHtml } from "@/lib/resumeHtml";
 import { ROLES } from "@/lib/roles";
 
-const LIME = "#d9f24e";
-const INK = "#1b1710";
+const LIME = "#dbeafe"; // blue-100 highlight
+const INK = "#2563eb";
 
 // Statically generate all 29 role pages at build time.
 export function generateStaticParams() {
@@ -73,7 +73,7 @@ export default async function RoleExamplePage({
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/sign-up"
-            className="rounded-full px-7 py-3.5 text-sm font-bold text-[#faf6ee] shadow-[3px_3px_0_0_#d9f24e] transition hover:-translate-y-0.5"
+            className="rounded-full px-7 py-3.5 text-sm font-bold text-white  transition hover:-translate-y-0.5"
             style={{ backgroundColor: INK }}
           >
             Build my {role.title} resume free
