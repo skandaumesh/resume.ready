@@ -1079,7 +1079,7 @@ export default function EditResumePage() {
 
       {/* Mobile full-screen live preview */}
       {mobilePreviewOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#e9ece1] lg:hidden">
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#f7f6f3] lg:hidden">
           <div className="flex shrink-0 items-center gap-3 border-b border-white/40 bg-white/40 px-4 py-3 backdrop-blur-sm">
             <div className="min-w-0">
               <h2 className="text-base font-bold text-stone-900">Live preview</h2>
@@ -1091,14 +1091,14 @@ export default function EditResumePage() {
             <div className="ml-auto flex shrink-0 items-center gap-2">
               <button
                 onClick={() => setGalleryOpen(true)}
-                className="rounded-xl bg-stone-900 px-3 py-2 text-xs font-semibold text-white hover:bg-stone-800"
+                className="soft-surface rounded-[11px] px-3 py-2 text-xs font-semibold text-stone-700 transition hover:brightness-95"
               >
                 Change template
               </button>
               <button
                 onClick={() => setMobilePreviewOpen(false)}
                 aria-label="Close preview"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-300 bg-white text-lg text-stone-600"
+                className="soft-surface flex h-9 w-9 items-center justify-center rounded-[11px] text-lg text-stone-600 transition hover:brightness-95"
               >
                 ×
               </button>

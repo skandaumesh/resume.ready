@@ -8,17 +8,24 @@ import { DEFAULT_TEMPLATE, isTemplateId } from "@/lib/templates";
 export const runtime = "nodejs"; // Puppeteer needs the Node runtime, not edge.
 export const maxDuration = 60;
 
+// Pinned to match the installed @sparticuz/chromium-min version — the pack
+// must be the same version or Chromium won't launch.
+const CHROMIUM_PACK_URL =
+  "https://github.com/Sparticuz/chromium/releases/download/v131.0.0/chromium-v131.0.0-pack.tar";
+
 // Launch a browser that works both locally (full `puppeteer`) and on serverless
-// hosts like Vercel (`puppeteer-core` + `@sparticuz/chromium`, which ships a
-// Lambda-compatible Chromium binary small enough to fit the bundle).
+// hosts like Vercel. `@sparticuz/chromium` (the full package) bundles a
+// Chromium binary too large for Vercel's serverless function size limit, so
+// it fails at deploy/runtime even though it works locally — `chromium-min`
+// fetches the binary from the pack URL above at cold start instead.
 async function launchBrowser() {
   const isServerless = !!process.env.VERCEL || process.env.NODE_ENV === "production";
   if (isServerless) {
-    const chromium = (await import("@sparticuz/chromium")).default;
+    const chromium = (await import("@sparticuz/chromium-min")).default;
     const puppeteer = (await import("puppeteer-core")).default;
     return puppeteer.launch({
       args: chromium.args,
-      executablePath: await chromium.executablePath(),
+      executablePath: await chromium.executablePath(CHROMIUM_PACK_URL),
       headless: true,
     });
   }
