@@ -21,6 +21,15 @@ const CHROMIUM_PACK_URL =
 async function launchBrowser() {
   const isServerless = !!process.env.VERCEL || process.env.NODE_ENV === "production";
   if (isServerless) {
+    // @sparticuz/chromium-min only extracts Chromium's shared libraries
+    // (libnss3.so, etc.) and sets LD_LIBRARY_PATH when it detects an AWS
+    // Lambda Node 20+ runtime — checked via this env var at import time.
+    // Vercel's functions run on that same base but don't set it themselves,
+    // so without this the package silently skips extraction and the binary
+    // fails with "error while loading shared libraries: libnss3.so: ...".
+    // Must be set before the import below, since the check runs at module
+    // load, not inside executablePath().
+    process.env.AWS_LAMBDA_JS_RUNTIME ??= "nodejs20.x";
     const chromium = (await import("@sparticuz/chromium-min")).default;
     const puppeteer = (await import("puppeteer-core")).default;
     return puppeteer.launch({
