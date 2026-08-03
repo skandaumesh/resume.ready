@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   TEMPLATES,
   FONTS,
@@ -39,10 +39,25 @@ function Thumb({
   );
   const meta = getTemplate(templateId);
 
-  // The card is ~230px wide; scale the 794px page down to fit.
-  const CARD_W = 230;
-  const scale = CARD_W / RENDER_W;
-  const CARD_H = 300;
+  // Scale to the card's actual rendered size instead of a fixed 230x300px —
+  // that hardcoded box overflowed its own grid cell once the gallery dropped
+  // to a 2-column grid on mobile (~160px cells), and its fixed height (not
+  // tied to the width) showed a growing gap of dead space below the content
+  // as cards got narrower. aspect-[4/3] below keeps height proportional to
+  // width, like the home/dashboard template grids already do.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ width: 230, height: 172.5 });
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      if (width > 0 && height > 0) setBox({ width, height });
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const scale = box.width / RENDER_W;
 
   return (
     <button
@@ -54,8 +69,8 @@ function Thumb({
       }`}
     >
       <div
-        className="relative overflow-hidden bg-white"
-        style={{ width: CARD_W, height: CARD_H }}
+        ref={containerRef}
+        className="relative aspect-[4/3] w-full overflow-hidden bg-white"
       >
         <iframe
           title={meta.name}
@@ -63,7 +78,7 @@ function Thumb({
           scrolling="no"
           tabIndex={-1}
           className="pointer-events-none absolute left-0 top-0 origin-top-left border-0"
-          style={{ width: RENDER_W, height: CARD_H / scale, transform: `scale(${scale})` }}
+          style={{ width: RENDER_W, height: box.height / scale, transform: `scale(${scale})` }}
         />
         {selected && (
           <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-white shadow">
@@ -207,10 +222,10 @@ export default function TemplateGallery({
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              className={`flex items-center gap-2 rounded-[11px] border px-4 py-2 text-sm font-semibold transition ${
                 tab === t.id
-                  ? "bg-stone-900 text-white"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  ? "border-blue-200 bg-blue-50 text-[#3385f9]"
+                  : "soft-surface border-transparent text-stone-600 hover:brightness-95"
               }`}
             >
               <span className="text-xs">{t.icon}</span>
@@ -292,7 +307,7 @@ export default function TemplateGallery({
               <>
                 <button
                   onClick={() => fileRef.current?.click()}
-                  className="rounded-xl border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-50"
+                  className="soft-surface rounded-[11px] px-4 py-2 text-sm font-semibold text-stone-700 transition hover:brightness-95"
                 >
                   {options.photo ? "Change photo" : "Upload photo"}
                 </button>
@@ -313,7 +328,7 @@ export default function TemplateGallery({
           </div>
           <button
             onClick={onClose}
-            className="rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            className="btn-gradient rounded-[11px] px-6 py-2.5 text-sm font-semibold"
           >
             Back to editor
           </button>
