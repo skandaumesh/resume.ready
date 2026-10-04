@@ -106,7 +106,7 @@ function getProviders(): Provider[] {
       url: GEMINI_URL,
       apiKey: geminiKey,
       models: splitModels(
-        process.env.GEMINI_MODEL || "gemini-3.8-flash,gemini-1.5-flash",
+        process.env.GEMINI_MODEL || "gemini-3.8-flash,gemini-2.5-flash-lite,gemini-1.5-flash",
       ),
     });
   }
@@ -131,9 +131,6 @@ function getProviders(): Provider[] {
       name: "cerebras",
       url: CEREBRAS_URL,
       apiKey: cerebrasKey,
-      // Purely free tier (no card, no data-training opt-in), ~1M tokens/day,
-      // fastest throughput of any provider here. Check cloud.cerebras.ai for
-      // current limits. zai-glm-4.7 is excluded — deprecating Aug 17, 2026.
       models: splitModels(process.env.CEREBRAS_MODEL || "llama-3.3-70b,llama3.1-8b"),
     });
   }
@@ -143,11 +140,10 @@ function getProviders(): Provider[] {
       name: "openrouter",
       url: OPENROUTER_URL,
       apiKey: openrouterKey,
-      // Fastest-first: smaller models return quicker; the large 120b model is
-      // kept last as a higher-quality fallback if the faster ones are busy.
+      // Wide spread of free models — if one is rate-limited, the next picks up.
       models: splitModels(
         process.env.OPENROUTER_MODEL ||
-          "qwen/qwen3.8-27b:free,liquid/lfm-2.5-2.6b:free,nvidia/nemotron-3.5-lightning:free,apodex/apodex-1.1-mini:free",
+          "qwen/qwen3.8-27b:free,nvidia/nemotron-3.5-lightning:free,thinkingmachines/inkling:free,poolside/laguna-s-2.1:free,liquid/lfm-2.5-2.6b:free,apodex/apodex-1.1-mini:free,nvidia/nemotron-3-ultra-550b-a55b:free",
       ),
     });
   }
