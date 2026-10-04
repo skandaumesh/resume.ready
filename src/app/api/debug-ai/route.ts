@@ -51,6 +51,33 @@ export async function GET() {
     results.gemini = "SKIPPED (no key)";
   }
 
+  // Test Groq
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    try {
+      const model = (process.env.GROQ_MODEL || "qwen/qwen3.8-27b").split(",")[0].trim();
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${groqKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: "Say OK" }],
+          temperature: 0.1,
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const text = await res.text();
+      results.groq = { status: res.status, model, body: text.slice(0, 300) };
+    } catch (e) {
+      results.groq = { error: String(e) };
+    }
+  } else {
+    results.groq = "SKIPPED (no key)";
+  }
+
   // Test OpenRouter
   const orKey = process.env.OPENROUTER_API_KEY;
   if (orKey) {
