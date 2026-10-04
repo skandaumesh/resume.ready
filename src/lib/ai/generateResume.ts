@@ -106,7 +106,7 @@ function getProviders(): Provider[] {
       url: GEMINI_URL,
       apiKey: geminiKey,
       models: splitModels(
-        process.env.GEMINI_MODEL || "gemini-2.0-flash,gemini-1.5-flash",
+        process.env.GEMINI_MODEL || "gemini-3.8-flash,gemini-1.5-flash",
       ),
     });
   }
