@@ -116,12 +116,9 @@ function getProviders(): Provider[] {
       name: "groq",
       url: GROQ_URL,
       apiKey: groqKey,
-      // Groq's free tier is generous and fast — a strong second layer of free
-      // capacity before falling through to OpenRouter's often-busier pool.
-      // Check console.groq.com for current per-model daily/minute limits.
       models: splitModels(
         process.env.GROQ_MODEL ||
-          "qwen/qwen3.8-27b,openai/gpt-oss-120b,openai/gpt-oss-20b",
+          "openai/gpt-oss-120b,openai/gpt-oss-20b,qwen/qwen3.8-27b",
       ),
     });
   }
@@ -140,10 +137,10 @@ function getProviders(): Provider[] {
       name: "openrouter",
       url: OPENROUTER_URL,
       apiKey: openrouterKey,
-      // Wide spread of free models — if one is rate-limited, the next picks up.
+      // Wide spread of verified free models — if one is rate-limited, the next picks up.
       models: splitModels(
         process.env.OPENROUTER_MODEL ||
-          "qwen/qwen3.8-27b:free,nvidia/nemotron-3.5-lightning:free,thinkingmachines/inkling:free,poolside/laguna-s-2.1:free,liquid/lfm-2.5-2.6b:free,apodex/apodex-1.1-mini:free,nvidia/nemotron-3-ultra-550b-a55b:free",
+          "qwen/qwen3.8-27b:free,nvidia/nemotron-3.5-lightning:free,apodex/apodex-1.1-mini:free,dots-studio/dots-3-note-preview:free,poolside/laguna-s-2.1:free",
       ),
     });
   }

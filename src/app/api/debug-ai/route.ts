@@ -55,7 +55,7 @@ export async function GET() {
   const groqKey = process.env.GROQ_API_KEY;
   if (groqKey) {
     try {
-      const model = (process.env.GROQ_MODEL || "qwen/qwen3.8-27b").split(",")[0].trim();
+      const model = (process.env.GROQ_MODEL || "openai/gpt-oss-120b").split(",")[0].trim();
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
