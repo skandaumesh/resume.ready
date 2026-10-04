@@ -106,7 +106,7 @@ function getProviders(): Provider[] {
       url: GEMINI_URL,
       apiKey: geminiKey,
       models: splitModels(
-        process.env.GEMINI_MODEL || "gemini-2.5-flash,gemini-2.5-flash-lite",
+        process.env.GEMINI_MODEL || "gemini-2.0-flash,gemini-1.5-flash",
       ),
     });
   }
@@ -121,7 +121,7 @@ function getProviders(): Provider[] {
       // Check console.groq.com for current per-model daily/minute limits.
       models: splitModels(
         process.env.GROQ_MODEL ||
-          "llama-3.1-8b-instant,openai/gpt-oss-20b,llama-3.3-70b-versatile,openai/gpt-oss-120b",
+          "llama-3.3-70b-versatile,llama-3.1-8b-instant",
       ),
     });
   }
@@ -134,7 +134,7 @@ function getProviders(): Provider[] {
       // Purely free tier (no card, no data-training opt-in), ~1M tokens/day,
       // fastest throughput of any provider here. Check cloud.cerebras.ai for
       // current limits. zai-glm-4.7 is excluded — deprecating Aug 17, 2026.
-      models: splitModels(process.env.CEREBRAS_MODEL || "gpt-oss-120b,gemma-4-31b"),
+      models: splitModels(process.env.CEREBRAS_MODEL || "llama-3.3-70b,llama3.1-8b"),
     });
   }
   const openrouterKey = process.env.OPENROUTER_API_KEY;
@@ -147,7 +147,7 @@ function getProviders(): Provider[] {
       // kept last as a higher-quality fallback if the faster ones are busy.
       models: splitModels(
         process.env.OPENROUTER_MODEL ||
-          "openai/gpt-oss-20b:free,google/gemma-4-31b-it:free,meta-llama/llama-3.3-70b-instruct:free,qwen/qwen3-next-80b-a3b-instruct:free,openai/gpt-oss-120b:free,meta-llama/llama-3.2-3b-instruct:free",
+          "qwen/qwen3.8-27b:free,liquid/lfm-2.5-2.6b:free,nvidia/nemotron-3.5-lightning:free,apodex/apodex-1.1-mini:free",
       ),
     });
   }
