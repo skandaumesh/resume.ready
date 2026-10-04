@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter_Tight } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Analytics } from "@vercel/analytics/react";
 import { authLocalization, globalClerkAppearance } from "@/components/authAppearance";
 import "./globals.css";
 
@@ -34,7 +35,10 @@ export default function RootLayout({
       appearance={globalClerkAppearance}
     >
       <html lang="en" className={interTight.variable}>
-        <body>{children}</body>
+        <body>
+          {children}
+          <Analytics />
+        </body>
       </html>
     </ClerkProvider>
   );
