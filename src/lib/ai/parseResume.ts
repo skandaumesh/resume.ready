@@ -4,7 +4,7 @@
 // AI calls go through callAi() in generateResume.ts (Gemini → OpenRouter).
 // ─────────────────────────────────────────────────────────────────────────
 
-import { ResumeContent, EMPTY_CONTENT, SECTION_KEYS, SectionKey } from "@/lib/types";
+import { ResumeContent, SECTION_KEYS, SectionKey } from "@/lib/types";
 import { callAi } from "./generateResume";
 
 export interface ParsedResume {
@@ -19,10 +19,12 @@ export interface ParsedResume {
     portfolio?: string;
   };
   answers: {
-    education?: string;
+    // Flat string-keyed entries, matching the editor's Entry type
+    // (draftPreview.ts) — one object per job/project/degree.
+    education?: Record<string, string>[];
     skills?: string[];
-    projects?: string;
-    experience?: string;
+    projects?: Record<string, string>[];
+    experience?: Record<string, string>[];
     certifications?: string;
     achievements?: string;
   };
@@ -42,16 +44,17 @@ const PARSE_SCHEMA = `Return ONLY a valid JSON object (no markdown, no code fenc
     "portfolio": "string or empty"
   },
   "answers": {
-    "education": "string — raw education text, one entry per line",
+    "education": [{ "degree": "string", "institution": "string", "startDate": "string", "endDate": "string", "details": "string — e.g. CGPA/percentage" }],
     "skills": ["string", ...],
-    "projects": "string — raw project descriptions, one per line",
-    "experience": "string — raw work experience, one entry per line",
+    "projects": [{ "name": "string", "techStack": "string — comma separated", "description": "string — what was built, one line per bullet, plain words not polished" }],
+    "experience": [{ "jobTitle": "string", "company": "string", "startDate": "string", "endDate": "string", "location": "string", "description": "string — what was done, one line per bullet, plain words not polished" }],
     "certifications": "string — one per line, or empty",
     "achievements": "string — one per line, or empty"
   },
   "content": {
     "summary": "string — 2-3 line professional summary",
     "skills": ["string", ...],
+    "skillGroups": [{ "category": "string", "items": ["string", ...] }],
     "experience": [{ "title": "string", "organization": "string", "duration": "string", "bullets": ["string", ...] }],
     "projects": [{ "name": "string", "techStack": ["string", ...], "bullets": ["string", ...] }],
     "education": [{ "degree": "string", "institution": "string", "duration": "string", "details": "string" }],
@@ -67,7 +70,7 @@ function buildParsePrompt(rawText: string): string {
 RULES:
 - Extract ALL information from the resume — do not omit anything.
 - For the "contact" field, extract the person's name, email, phone, location, and any LinkedIn/GitHub/portfolio links.
-- For the "answers" field, extract the raw text for each section as-is (education, skills, projects, experience, certifications, achievements). Skills should be an array of individual skill strings.
+- For the "answers" field, split education/projects/experience into ONE OBJECT PER ENTRY (one per job, one per project, one per degree) — never merge multiple jobs or degrees into a single entry. Keep each entry's own text close to the original wording (unpolished is fine here — "content" below is where it gets polished). Skills should be an array of individual skill strings.
 - For the "content" field, produce polished, ATS-friendly structured content:
   - Every bullet starts with a strong past-tense action verb.
   - Keep bullets concise (under 25 words each).
@@ -75,6 +78,7 @@ RULES:
   - Do not fabricate information not present in the resume.
 - For "roleTitle", infer the most likely target role from the resume content (e.g. "Software Developer", "Data Analyst").
 - For "sectionOrder", order sections by what's most impressive/relevant for the inferred role.
+- For "content.skillGroups": if the resume ALREADY groups skills into categories (e.g. "Languages:", "Frameworks:"), preserve that grouping here. Otherwise, only create groups if there are enough skills (roughly 8+) to naturally split into categories; leave it as an empty array if not. Always fill "content.skills" with the same skills as a flat list regardless.
 - Write in plain, natural English. Do NOT use em dashes or double hyphens.
 
 RAW RESUME TEXT:
@@ -102,6 +106,31 @@ function coerceStringArray(v: unknown): string[] {
   return [];
 }
 
+// Coerce a parsed "answers" entry array into the flat string-keyed Entry
+// shape the editor's EntryList/toEntries expect (draftPreview.ts), only
+// keeping entries that have at least one non-empty field. Tolerates a model
+// that still returns a single string despite the schema, by treating it as
+// one legacy entry so import doesn't hard-fail on a minor prompt slip.
+function coerceEntries(
+  v: unknown,
+  fields: string[],
+): Record<string, string>[] {
+  const toEntry = (obj: any): Record<string, string> => {
+    const entry: Record<string, string> = {};
+    for (const f of fields) entry[f] = String(obj?.[f] ?? "");
+    return entry;
+  };
+  if (Array.isArray(v)) {
+    return v
+      .map((item) => toEntry(item))
+      .filter((entry) => Object.values(entry).some((x) => x.trim()));
+  }
+  if (typeof v === "string" && v.trim()) {
+    return [{ ...toEntry({}), [fields[fields.length - 1]]: v.trim() }];
+  }
+  return [];
+}
+
 function normalizeSectionOrder(v: unknown): SectionKey[] {
   const valid = new Set<string>(SECTION_KEYS);
   const seen = new Set<SectionKey>();
@@ -121,10 +150,21 @@ function normalizeSectionOrder(v: unknown): SectionKey[] {
   return order;
 }
 
+function coerceSkillGroups(v: unknown): { category: string; items: string[] }[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((g: any) => ({
+      category: String(g?.category ?? ""),
+      items: coerceStringArray(g?.items),
+    }))
+    .filter((g) => g.category && g.items.length);
+}
+
 function normalizeContent(parsed: any): ResumeContent {
   return {
     summary: typeof parsed?.summary === "string" ? parsed.summary : "",
     skills: coerceStringArray(parsed?.skills),
+    skillGroups: coerceSkillGroups(parsed?.skillGroups),
     experience: Array.isArray(parsed?.experience)
       ? parsed.experience.map((e: any) => ({
           title: String(e?.title ?? ""),
@@ -170,10 +210,17 @@ function normalize(parsed: any): ParsedResume {
       portfolio: String(contact.portfolio ?? ""),
     },
     answers: {
-      education: typeof answers.education === "string" ? answers.education : "",
+      education: coerceEntries(answers.education, ["degree", "institution", "startDate", "endDate", "details"]),
       skills: coerceStringArray(answers.skills),
-      projects: typeof answers.projects === "string" ? answers.projects : "",
-      experience: typeof answers.experience === "string" ? answers.experience : "",
+      projects: coerceEntries(answers.projects, ["name", "techStack", "description"]),
+      experience: coerceEntries(answers.experience, [
+        "jobTitle",
+        "company",
+        "startDate",
+        "endDate",
+        "location",
+        "description",
+      ]),
       certifications: typeof answers.certifications === "string" ? answers.certifications : "",
       achievements: typeof answers.achievements === "string" ? answers.achievements : "",
     },

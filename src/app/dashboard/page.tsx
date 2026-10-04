@@ -261,7 +261,7 @@ export default function DashboardPage() {
           <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredResumes.map((r) => {
               const contact = r.contact || {};
-              const content = r.content || EMPTY_CONTENT;
+              const content = { ...EMPTY_CONTENT, ...(r.content || {}) };
               const templateId = r.template || "classic";
               const template =
                 TEMPLATES.find((t) => t.id === templateId) || TEMPLATES[0];

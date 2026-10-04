@@ -12,7 +12,7 @@
 // exported functions.
 // ─────────────────────────────────────────────────────────────────────────
 
-import { ResumeContent, EMPTY_CONTENT, SECTION_KEYS, SectionKey } from "@/lib/types";
+import { ResumeContent, EMPTY_CONTENT, SECTION_KEYS, SectionKey, SkillGroup } from "@/lib/types";
 import { serializeAnswersForPrompt } from "@/lib/draftPreview";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -41,6 +41,7 @@ const SCHEMA_HINT = `Return ONLY a valid JSON object (no markdown, no code fence
 {
   "summary": "string — 2 to 3 line professional summary tailored to the target role",
   "skills": ["string", ...],
+  "skillGroups": [{ "category": "string", "items": ["string", ...] }],
   "experience": [{ "title": "string", "organization": "string", "duration": "string", "bullets": ["string", ...] }],
   "projects": [{ "name": "string", "techStack": ["string", ...], "bullets": ["string", ...] }],
   "education": [{ "degree": "string", "institution": "string", "duration": "string", "details": "string" }],
@@ -48,7 +49,8 @@ const SCHEMA_HINT = `Return ONLY a valid JSON object (no markdown, no code fence
   "achievements": ["string", ...],
   "sectionOrder": ["summary","skills","experience","projects","education","certifications","achievements"]
 }
-For "sectionOrder": order the sections in the way that is MOST effective for the target role. Only use these exact keys. Put the sections that best sell the candidate for THIS role first (e.g. a designer or developer usually leads with projects/skills; a fresher with little else leads with education; a sales/marketing role leads with achievements/experience). Include every key once.`;
+For "sectionOrder": order the sections in the way that is MOST effective for the target role. Only use these exact keys. Put the sections that best sell the candidate for THIS role first (e.g. a designer or developer usually leads with projects/skills; a fresher with little else leads with education; a sales/marketing role leads with achievements/experience). Include every key once.
+For "skillGroups": ALWAYS also fill "skills" with the same skills as one flat list (never leave it empty), regardless of whether you use skillGroups. Only populate "skillGroups" when the candidate has enough distinct skills (roughly 8+) that naturally split into clear categories (e.g. "Programming", "Frameworks", "DevOps", "Cloud Providers", "Design Tools"). If the skills are few or don't naturally group, leave "skillGroups" as an empty array and rely on "skills" alone.`;
 
 function buildPrompt(input: GenerateInput): string {
   const { roleTitle, answers, contact } = input;
@@ -350,6 +352,16 @@ function coerceStringArray(v: unknown): string[] {
   return [];
 }
 
+function coerceSkillGroups(v: unknown): SkillGroup[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((g: any) => ({
+      category: sanitizeText(String(g?.category ?? "")),
+      items: coerceStringArray(g?.items),
+    }))
+    .filter((g) => g.category && g.items.length);
+}
+
 // Normalize an arbitrary parsed object into a safe ResumeContent so the rest of
 // the app never has to defend against missing/oddly-typed fields.
 function normalize(parsed: any): ResumeContent {
@@ -357,6 +369,7 @@ function normalize(parsed: any): ResumeContent {
   return {
     summary: typeof parsed?.summary === "string" ? sanitizeText(parsed.summary) : "",
     skills: coerceStringArray(parsed?.skills),
+    skillGroups: coerceSkillGroups(parsed?.skillGroups),
     experience: Array.isArray(parsed?.experience)
       ? parsed.experience.map((e: any) => ({
           title: s(e?.title),

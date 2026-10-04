@@ -44,6 +44,12 @@ function skillList(answers: Answers): string[] {
   return splitComma(answers.skills);
 }
 
+function skillGroupList(answers: Answers): { category: string; items: string[] }[] {
+  return toEntries(answers.skillGroups, "category")
+    .map((g) => ({ category: str(g.category), items: splitComma(g.items) }))
+    .filter((g) => g.category && g.items.length);
+}
+
 // Build a rough ResumeContent live from the structured inputs (before AI polish)
 // so the right-hand preview updates as the student types.
 export function buildDraftContent(answers: Answers): ResumeContent {
@@ -77,6 +83,7 @@ export function buildDraftContent(answers: Answers): ResumeContent {
     ...EMPTY_CONTENT,
     summary: "",
     skills: skillList(answers),
+    skillGroups: skillGroupList(answers),
     experience,
     projects,
     education,
@@ -165,8 +172,16 @@ export function serializeAnswersForPrompt(answers: Answers): string {
     );
   }
 
-  const skills = skillList(answers);
-  if (skills.length) parts.push("SKILLS: " + skills.join(", "));
+  const skillGroups = skillGroupList(answers);
+  if (skillGroups.length) {
+    parts.push(
+      "SKILLS (the student grouped these into categories — preserve this grouping in skillGroups):\n" +
+        skillGroups.map((g) => `- ${g.category}: ${g.items.join(", ")}`).join("\n"),
+    );
+  } else {
+    const skills = skillList(answers);
+    if (skills.length) parts.push("SKILLS: " + skills.join(", "));
+  }
 
   if (str(answers.certifications).trim())
     parts.push("CERTIFICATIONS:\n" + str(answers.certifications).trim());

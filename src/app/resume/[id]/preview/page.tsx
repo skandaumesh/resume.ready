@@ -6,6 +6,7 @@ import { renderResumeHtml } from "@/lib/resumeHtml";
 import { EMPTY_CONTENT, ResumeContent, ContactInfo } from "@/lib/types";
 import { DEFAULT_TEMPLATE, isTemplateId } from "@/lib/templates";
 import AppHeader, { APP_SIDEBAR_WIDTH_CLASS } from "@/components/AppHeader";
+import ScaledResumePreview from "@/components/ScaledResumePreview";
 
 export const dynamic = "force-dynamic";
 
@@ -117,17 +118,11 @@ export default async function PreviewPage({
             </p>
           </aside>
 
-          {/* Right — the resume as a real A4 sheet on a document canvas. The
-              sheet keeps the exact 210:297 (A4) ratio at 794px wide, which is
-              how the PDF route renders it, so this preview matches 1:1. */}
-          <div className="overflow-auto rounded-2xl bg-stone-200/60 p-4 shadow-inner sm:p-6 lg:max-h-[calc(100vh-9rem)]">
-            <div className="mx-auto aspect-[210/297] w-full max-w-[794px] overflow-hidden rounded-md bg-white shadow-xl ring-1 ring-black/5">
-              <iframe
-                title="Resume preview"
-                srcDoc={html}
-                className="h-full w-full bg-white"
-              />
-            </div>
+          {/* Right — the resume as real A4 sheet(s) on a document canvas, one
+              box per page it actually spans (matching the downloaded PDF),
+              instead of a single fixed-ratio box that clipped page 2+. */}
+          <div className="flex flex-col rounded-2xl bg-stone-200/60 p-4 shadow-inner sm:p-6 lg:h-[calc(100vh-9rem)]">
+            <ScaledResumePreview html={html} />
           </div>
         </div>
       </main>

@@ -13,6 +13,7 @@ import { EMPTY_CONTENT, ResumeContent } from "@/lib/types";
 import { TemplateId, DEFAULT_TEMPLATE, isTemplateId, TemplateOptions, FontId } from "@/lib/templates";
 import EntryList, { EntryField } from "@/components/EntryList";
 import TemplateGallery from "@/components/TemplateGallery";
+import ScaledPreview from "@/components/ScaledResumePreview";
 
 const EXPERIENCE_FIELDS: EntryField[] = [
   { id: "jobTitle", label: "Job title", placeholder: "Data Analyst Intern", half: true },
@@ -45,6 +46,11 @@ const EDUCATION_FIELDS: EntryField[] = [
   { id: "startDate", label: "Start year", placeholder: "2022", half: true },
   { id: "endDate", label: "End year", placeholder: "2026", half: true },
   { id: "details", label: "CGPA / percentage / details", placeholder: "CGPA 8.4", half: true },
+];
+
+const SKILL_GROUP_FIELDS: EntryField[] = [
+  { id: "category", label: "Category", placeholder: "Programming" },
+  { id: "items", label: "Skills (comma separated)", placeholder: "Python, Java, TypeScript" },
 ];
 
 type Answers = Record<string, string | string[] | Entry[]>;
@@ -82,66 +88,6 @@ const Q: Record<string, Question> = Object.fromEntries(
 );
 
 let customFieldCounter = 0;
-
-// A4 page width in px at 96dpi. We scale the page to fill the pane WIDTH and
-// let it scroll vertically, so the sheet sits at the top and reads at a
-// comfortable size, like a real A4 document in a frame.
-const PAGE_WIDTH = 794;
-
-// Scaled A4 preview pane — used in the desktop side panel and the mobile
-// full-screen overlay, each with its own container width to scale against.
-function ScaledPreview({ html }: { html: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.6);
-  const [docHeight, setDocHeight] = useState(1123);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const observer = new ResizeObserver((entries) => {
-      const width = entries[0].contentRect.width;
-      if (width > 0) setScale(width / PAGE_WIDTH);
-    });
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
-
-  // Measure the rendered resume's real height so the scaled page scrolls
-  // naturally instead of being clipped to a fixed A4 box.
-  function handleLoad(e: { currentTarget: HTMLIFrameElement }) {
-    const doc = e.currentTarget.contentDocument;
-    if (doc) {
-      const h = doc.documentElement?.scrollHeight || doc.body?.scrollHeight || 1123;
-      setDocHeight(Math.max(h, 200));
-    }
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-xl"
-    >
-      {/* Spacer holds the scaled page's real height so the pane scrolls. */}
-      <div
-        className="relative mx-auto"
-        style={{ width: PAGE_WIDTH * scale, height: docHeight * scale }}
-      >
-        <div
-          className="absolute left-0 top-0 origin-top-left bg-white shadow-2xl"
-          style={{ width: PAGE_WIDTH, transform: `scale(${scale})` }}
-        >
-          <iframe
-            title="Live resume preview"
-            srcDoc={html}
-            onLoad={handleLoad}
-            scrolling="no"
-            style={{ width: PAGE_WIDTH, height: docHeight, border: 0, display: "block" }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function EditResumePage() {
   const { id } = useParams() as { id: string };
@@ -930,6 +876,25 @@ export default function EditResumePage() {
                   Tools, languages, and anything relevant to the role.
                 </p>
                 <div className="mt-4">{renderQuestion(Q.skills)}</div>
+
+                <h3 className="mt-6 text-sm font-semibold text-stone-700">
+                  Group into categories (optional)
+                </h3>
+                <p className="mt-1 text-xs text-stone-500">
+                  For a long skill list, split it into labeled groups like
+                  &ldquo;Programming&rdquo; or &ldquo;DevOps&rdquo; instead of one line. Leave
+                  this empty to keep the plain list above.
+                </p>
+                <div className="mt-3">
+                  <EntryList
+                    entries={(answers.skillGroups as Entry[]) ?? []}
+                    onChange={(next) => updateAnswer("skillGroups", next)}
+                    fields={SKILL_GROUP_FIELDS}
+                    titleField="category"
+                    addLabel="Add category"
+                    singular="Category"
+                  />
+                </div>
               </>
             )}
 

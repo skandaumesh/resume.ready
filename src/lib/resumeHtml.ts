@@ -152,13 +152,40 @@ export function renderResumeHtml(
     )
     .join("");
 
-  const skillsHtml = content.skills.length
-    ? `<p class="skills">${content.skills.map((s) => esc(s)).join("  •  ")}</p>`
-    : "";
-  // Skills stacked one-per-line for the narrow sidebar layouts.
-  const skillsStackHtml = content.skills.length
-    ? `<ul class="skills-stack">${content.skills.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`
-    : "";
+  // Resumes saved before skillGroups existed have no such key in their
+  // stored JSON at all — `?? []` covers that regardless of what the type
+  // declares, since callers loading DB data don't all merge in defaults.
+  const skillGroups = content.skillGroups ?? [];
+  const hasGroups = skillGroups.some((g) => g.category.trim() && g.items.length);
+
+  const skillsHtml = hasGroups
+    ? `<div class="skill-groups">${skillGroups
+        .filter((g) => g.category.trim() && g.items.length)
+        .map(
+          (g) =>
+            `<div class="skill-group"><span class="sg-cat">${esc(g.category)}</span><span class="sg-items">${esc(
+              g.items.join(", "),
+            )}</span></div>`,
+        )
+        .join("")}</div>`
+    : content.skills.length
+      ? `<p class="skills">${content.skills.map((s) => esc(s)).join("  •  ")}</p>`
+      : "";
+  // Skills stacked for the narrow sidebar layouts — grouped by category when
+  // available, otherwise one skill per line.
+  const skillsStackHtml = hasGroups
+    ? skillGroups
+        .filter((g) => g.category.trim() && g.items.length)
+        .map(
+          (g) =>
+            `<div class="side-skill-group"><p class="sg-cat">${esc(g.category)}</p><p class="sg-items">${esc(
+              g.items.join(", "),
+            )}</p></div>`,
+        )
+        .join("")
+    : content.skills.length
+      ? `<ul class="skills-stack">${content.skills.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`
+      : "";
 
   const sectionHtmlByKey: Record<SectionKey, string> = {
     summary: section(
@@ -318,14 +345,26 @@ export function renderResumeHtml(
 const BASE_CSS = `
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
-  .entry { margin-bottom: 10px; }
+  .entry { margin-bottom: 10px; break-inside: avoid; }
   .entry-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
   .entry-title { font-weight: bold; }
   .entry-date { color: #555; font-size: 9.5pt; text-align: right; flex-shrink: 0; max-width: 45%; }
   .detail { margin: 2px 0 0; color: #333; font-size: 10pt; }
   ul { margin: 4px 0 0; padding-left: 18px; }
-  li { margin-bottom: 3px; }
+  li { margin-bottom: 3px; break-inside: avoid; }
   .summary, .skills { margin: 0; }
+  /* Categorized skills — "Category: item, item, item" rows, category label
+     in a fixed-width column so the values line up like a mini table. */
+  .skill-groups { display: flex; flex-direction: column; gap: 3px; }
+  .skill-group { display: flex; gap: 10px; break-inside: avoid; }
+  .skill-group .sg-cat { flex-shrink: 0; width: 132px; font-weight: bold; }
+  .skill-group .sg-items { flex: 1; }
+  .side-skill-group { margin-bottom: 8px; break-inside: avoid; }
+  .side-skill-group .sg-cat { font-weight: bold; font-size: 9.5pt; margin: 0 0 2px; }
+  .side-skill-group .sg-items { margin: 0; font-size: 9.5pt; opacity: 0.95; }
+  /* Keep a section's heading with at least the first line of its content —
+     a heading stranded alone at the bottom of a page looks broken. */
+  h2, h3 { break-after: avoid; }
   @page { margin: 0; size: A4; }
 `;
 
@@ -340,7 +379,8 @@ function styleFor(
   h1 { margin: 0; }
   section { margin-top: 15px; }
   h2 { font-size: 11pt; text-transform: uppercase; letter-spacing: 0.7px; color: ${accent}; margin: 0 0 7px; padding-bottom: 3px; border-bottom: 1px solid ${accent}33; }
-  a { color: inherit; }`;
+  a { color: inherit; }
+  .skill-group .sg-items { color: ${accent}; }`;
 
   if (layout === "sidebar-left" || layout === "sidebar-right") {
     return `${common}
@@ -385,7 +425,7 @@ function styleFor(
   .highlight-right { width: 38%; }
   .highlight-right section { margin-top: 0; margin-bottom: 20px; }
   .achv-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
-  .achv-card { display: flex; gap: 8px; align-items: flex-start; }
+  .achv-card { display: flex; gap: 8px; align-items: flex-start; break-inside: avoid; }
   .achv-dot { flex-shrink: 0; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: ${accent}; }
   .achv-card p { margin: 0; font-size: 9.5pt; color: #333; }
   .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
@@ -399,7 +439,7 @@ function styleFor(
   header h1 { font-size: 22pt; letter-spacing: 0.4px; color: ${accent}; }
   header .contact { font-size: 9.5pt; color: #444; margin-top: 4px; }
   .tl-track { margin-top: 2px; }
-  .tl-item { display: flex; gap: 14px; }
+  .tl-item { display: flex; gap: 14px; break-inside: avoid; }
   .tl-rail { display: flex; flex-direction: column; align-items: center; width: 9px; flex-shrink: 0; }
   .tl-dot { width: 9px; height: 9px; border-radius: 50%; background: ${accent}; flex-shrink: 0; margin-top: 3px; }
   .tl-line { flex: 1; width: 2px; background: ${accent}33; margin-top: 2px; }

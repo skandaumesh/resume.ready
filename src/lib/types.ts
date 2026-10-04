@@ -36,6 +36,16 @@ export interface EducationItem {
   details?: string; // CGPA / relevant coursework
 }
 
+// Optional categorized skills (e.g. "Programming: Python, Java, ...",
+// "DevOps: Docker, Kubernetes, ..."). When present and non-empty, the
+// renderer shows this grouped layout instead of the flat `skills` line —
+// `skills` stays populated regardless, as the fallback for templates/older
+// data that don't handle groups.
+export interface SkillGroup {
+  category: string;
+  items: string[];
+}
+
 // Valid section keys the AI may order. Kept as a const so the renderer and the
 // AI normalizer agree on the vocabulary.
 export const SECTION_KEYS = [
@@ -52,6 +62,7 @@ export type SectionKey = (typeof SECTION_KEYS)[number];
 export interface ResumeContent {
   summary: string; // 2–3 line professional summary tailored to the role
   skills: string[]; // flat list of skills (grouped by the template if needed)
+  skillGroups: SkillGroup[]; // optional categorized view of the same skills
   experience: ExperienceItem[];
   projects: ProjectItem[];
   education: EducationItem[];
@@ -67,6 +78,7 @@ export interface ResumeContent {
 export const EMPTY_CONTENT: ResumeContent = {
   summary: "",
   skills: [],
+  skillGroups: [],
   experience: [],
   projects: [],
   education: [],
