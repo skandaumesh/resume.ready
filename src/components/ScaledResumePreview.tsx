@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 // A4 page size in px at 96dpi — matches the @page size in resumeHtml.ts, so
-// a page break here lands exactly where Puppeteer would actually cut the PDF.
+// a page break here lands exactly where the browser's "Save as PDF" cuts it.
 const PAGE_WIDTH = 794;
 const PAGE_HEIGHT = 1123;
 

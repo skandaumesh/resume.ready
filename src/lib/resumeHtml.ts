@@ -1,7 +1,7 @@
 // Pure function that renders a complete, standalone HTML document for a resume.
 // Used as the SINGLE SOURCE OF TRUTH by:
 //   - the template gallery thumbnails and the live preview (<iframe srcDoc>), and
-//   - the PDF route (rendered to PDF by Puppeteer),
+//   - the print page (/resume/[id]/print), which the browser saves as a PDF,
 // so what the user sees is exactly what they download.
 //
 // The look is driven by a template PRESET (layout + typography + accent) plus
@@ -17,7 +17,7 @@ import {
   getTemplate,
 } from "@/lib/templates";
 
-function esc(s: string): string {
+export function esc(s: string): string {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

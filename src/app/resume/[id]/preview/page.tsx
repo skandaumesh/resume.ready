@@ -104,9 +104,10 @@ export default async function PreviewPage({
             >
               Edit answers
             </Link>
-            {/* Native download via the PDF route. */}
+            {/* The print page — the browser itself saves the PDF. A plain <a>,
+                not <Link>: it's a route handler, not a Next page. */}
             <a
-              href={`/api/resumes/${id}/pdf`}
+              href={`/resume/${id}/print`}
               className="rounded-xl bg-brand-600 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-700"
             >
               Download PDF

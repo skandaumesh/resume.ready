@@ -15,7 +15,7 @@ Works on phone and desktop (fully responsive).
 | Auth       | Clerk (email + Google)                                        |
 | Database   | PostgreSQL (Supabase) via Prisma ORM                          |
 | AI         | OpenRouter free-tier models (swappable — see `src/lib/ai/`)   |
-| PDF export | Puppeteer (local) / `@sparticuz/chromium` (serverless/Vercel) |
+| PDF export | Browser print → "Save as PDF" (no server-side rendering)    |
 
 ## Prerequisites (free accounts)
 
@@ -65,8 +65,9 @@ src/
     dashboard/new/page.tsx       Role selection
     resume/[id]/edit/page.tsx    Q&A intake + generate
     resume/[id]/preview/page.tsx Preview + download
+    resume/[id]/print/route.ts   Print page → browser "Save as PDF"
     sign-in / sign-up            Clerk pages
-    api/resumes/…                CRUD + generate + pdf routes
+    api/resumes/…                CRUD + generate routes
   lib/
     ai/generateResume.ts         ⭐ The ONLY AI call — swap providers here
     resumeHtml.ts                ATS-safe HTML template (preview + PDF share it)
@@ -80,8 +81,6 @@ prisma/schema.prisma             DB schema
 ## Deploying to Vercel
 
 - Add all `.env` values as Vercel environment variables.
-- The PDF route auto-switches to `puppeteer-core` + `@sparticuz/chromium` in
-  production (see `src/app/api/resumes/[id]/pdf/route.ts`).
 - Use the **connection-pooling** Supabase URL as `DATABASE_URL`.
 
 ## Scaling notes (read before going big)
@@ -89,8 +88,9 @@ prisma/schema.prisma             DB schema
 - **AI (OpenRouter free tier)** is rate-limited and can be inconsistent under
   load — fine for launch, but swap `src/lib/ai/generateResume.ts` to a paid model
   when volume grows (that's the only file that changes).
-- **PDF (Puppeteer)** is heavy on serverless. If cold starts/timeouts bite, move
-  PDF generation to a queue or a dedicated service.
+- **PDF export** costs the server nothing: `/resume/[id]/print` serves the resume
+  as a print page and the student's browser saves the PDF (desktop print dialog,
+  Android print, iOS print sheet).
 - **Supabase free tier** (500 MB, pauses when idle) covers ~100k text-only
   resumes; upgrade when you have the users to justify it.
 

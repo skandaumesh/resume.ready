@@ -965,7 +965,7 @@ export default function EditResumePage() {
                 {generated && !generating && (
                   <div className="mt-4 flex flex-wrap gap-2">
                     <a
-                      href={`/api/resumes/${id}/pdf`}
+                      href={`/resume/${id}/print`}
                       className="btn-gradient rounded-[11px] px-4 py-2 text-sm font-semibold"
                     >
                       Download PDF
