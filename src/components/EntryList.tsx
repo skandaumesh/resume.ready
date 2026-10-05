@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Entry } from "@/lib/draftPreview";
+import { TipKind } from "@/lib/bulletTips";
+import WritingHelp from "@/components/WritingHelp";
 
 export interface EntryField {
   id: string;
@@ -20,6 +22,8 @@ export default function EntryList({
   addLabel,
   singular,
   onImprove,
+  helpKind,
+  roleTitle = "",
 }: {
   entries: Entry[];
   onChange: (next: Entry[]) => void;
@@ -29,6 +33,9 @@ export default function EntryList({
   addLabel: string;
   singular: string;
   onImprove?: (text: string) => Promise<string[]>;
+  /** Show instant tips + example lines under the description (WritingHelp). */
+  helpKind?: TipKind;
+  roleTitle?: string;
 }) {
   const [openIdx, setOpenIdx] = useState<number>(entries.length ? 0 : -1);
   const [busyIdx, setBusyIdx] = useState<number | null>(null);
@@ -68,6 +75,13 @@ export default function EntryList({
       setBusyIdx(null);
     }
   }
+  // Add a tapped example line to the end of the description, as a bullet.
+  function addExample(i: number, line: string) {
+    if (!descriptionField) return;
+    const current = (entries[i]?.[descriptionField] ?? "").trimEnd();
+    setField(i, descriptionField, `${current ? current + "\n" : ""}- ${line}`);
+  }
+
   function applySuggest(i: number) {
     const b = suggest[i];
     if (!b?.length || !descriptionField) return;
@@ -138,6 +152,15 @@ export default function EntryList({
                           onChange={(e) => setField(i, f.id, e.target.value)}
                           placeholder={f.placeholder}
                           className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2.5 text-sm outline-none focus:border-brand-500"
+                        />
+                      )}
+
+                      {descriptionField === f.id && helpKind && (
+                        <WritingHelp
+                          text={entry[f.id] ?? ""}
+                          kind={helpKind}
+                          roleTitle={roleTitle}
+                          onUseExample={(line) => addExample(i, line)}
                         />
                       )}
 

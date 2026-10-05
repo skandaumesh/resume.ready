@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import PublicShell from "@/components/PublicShell";
+import AiWaitNotice from "@/components/AiWaitNotice";
+import SignInToContinue from "@/components/SignInToContinue";
+import { fetchAi } from "@/lib/aiFetch";
 import { AtsResult } from "@/lib/ats";
 
 const INK = "#2563eb";
@@ -118,6 +121,8 @@ export default function PublicAtsCheckPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiWait, setAiWait] = useState<number | null>(null);
+  const [signInNeeded, setSignInNeeded] = useState(false);
   const [report, setReport] = useState<{
     fileName: string;
     result: AtsResult;
@@ -130,14 +135,16 @@ export default function PublicAtsCheckPage() {
     if (!file) return;
 
     setError(null);
+    setSignInNeeded(false);
     setReport(null);
     setBusy(true);
 
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch("/api/public/ats", { method: "POST", body: formData });
+      const res = await fetchAi("/api/public/ats", { method: "POST", body: formData }, setAiWait);
       const data = await res.json().catch(() => ({}));
+      setSignInNeeded(Boolean(!res.ok && data?.signIn));
       if (!res.ok) setError(data?.error || "Could not check this file. Try again.");
       else setReport({ fileName: file.name, result: data.result, locked: data.locked });
     } catch {
@@ -186,11 +193,13 @@ export default function PublicAtsCheckPage() {
           </p>
         </div>
 
+        <AiWaitNotice seconds={aiWait} className="mx-auto mt-6 max-w-md" />
         {error && (
           <p className="mx-auto mt-6 max-w-md rounded-2xl bg-red-100 p-4 text-sm font-medium text-red-800">
             {error}
           </p>
         )}
+        {signInNeeded && <SignInToContinue className="mt-4 justify-center" />}
       </div>
 
       {report && <Report result={report.result} locked={report.locked} />}

@@ -12,7 +12,7 @@ import {
   notAResumeMessage,
 } from "@/lib/resumeDetect";
 import { computeAtsScore } from "@/lib/ats";
-import { consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
+import { aiBusyResponse, consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
 import { track } from "@/lib/track";
 
 // Text extraction + AI parsing need the Node runtime and some time.
@@ -88,6 +88,8 @@ export async function POST(req: NextRequest) {
     if (err instanceof FileExtractError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
+    const busy = await aiBusyResponse(err, rl);
+    if (busy) return busy;
     const message =
       err instanceof Error ? err.message : "Could not read the resume.";
     return NextResponse.json({ error: message }, { status: 502 });

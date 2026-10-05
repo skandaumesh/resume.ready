@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { improveField } from "@/lib/ai/generateResume";
-import { consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
+import { aiBusyResponse, consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
 import { track } from "@/lib/track";
 
 export const maxDuration = 60;
@@ -46,6 +46,8 @@ export async function POST(
     await track("field_improved", userId, { field: fieldLabel });
     return NextResponse.json({ bullets });
   } catch (err) {
+    const busy = await aiBusyResponse(err, rl);
+    if (busy) return busy;
     const message =
       err instanceof Error ? err.message : "Could not improve this field.";
     return NextResponse.json({ error: message }, { status: 502 });

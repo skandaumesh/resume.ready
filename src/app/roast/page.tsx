@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import PublicShell from "@/components/PublicShell";
+import AiWaitNotice from "@/components/AiWaitNotice";
+import SignInToContinue from "@/components/SignInToContinue";
+import { fetchAi } from "@/lib/aiFetch";
 
 const INK = "#2563eb"; // primary action
 const LIME = "#dbeafe"; // blue-100 highlight
@@ -17,6 +20,8 @@ export default function RoastPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiWait, setAiWait] = useState<number | null>(null);
+  const [signInNeeded, setSignInNeeded] = useState(false);
   const [roast, setRoast] = useState<Roast | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -26,14 +31,16 @@ export default function RoastPage() {
     if (!file) return;
 
     setError(null);
+    setSignInNeeded(false);
     setRoast(null);
     setBusy(true);
 
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch("/api/public/roast", { method: "POST", body: formData });
+      const res = await fetchAi("/api/public/roast", { method: "POST", body: formData }, setAiWait);
       const data = await res.json().catch(() => ({}));
+      setSignInNeeded(Boolean(!res.ok && data?.signIn));
       if (!res.ok) setError(data?.error || "The roaster is busy. Try again.");
       else setRoast({ roast: data.roast, fixes: data.fixes });
     } catch {
@@ -99,11 +106,13 @@ export default function RoastPage() {
           </p>
         </div>
 
+        <AiWaitNotice seconds={aiWait} className="mx-auto mt-6 max-w-md" />
         {error && (
           <p className="mx-auto mt-6 max-w-md rounded-2xl bg-red-100 p-4 text-sm font-medium text-red-800">
             {error}
           </p>
         )}
+        {signInNeeded && <SignInToContinue className="mt-4 justify-center" />}
       </div>
 
       {roast && (

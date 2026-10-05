@@ -12,10 +12,10 @@ import {
   notAResumeMessage,
 } from "@/lib/resumeDetect";
 import {
-  consumeRateLimit,
-  getClientIp,
+  aiBusyResponse,
+  consumePublicRateLimit,
   LIMITS,
-  PUBLIC_LIMIT_MESSAGE,
+  publicLimitResponse,
 } from "@/lib/rateLimit";
 import { track } from "@/lib/track";
 
@@ -27,11 +27,8 @@ export const maxDuration = 90;
 // guidance is stripped SERVER-side (not just hidden in the UI) and unlocks
 // after sign-up. IP rate-limited because each call costs an AI parse.
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req);
-  const rl = await consumeRateLimit(`ip:${ip}:pats`, LIMITS.publicAts);
-  if (!rl.ok) {
-    return NextResponse.json({ error: PUBLIC_LIMIT_MESSAGE }, { status: 429 });
-  }
+  const rl = await consumePublicRateLimit(req, "pats", LIMITS.publicAts, { usesAi: true });
+  if (!rl.ok) return publicLimitResponse(rl);
 
   let formData: FormData;
   try {
@@ -88,6 +85,8 @@ export async function POST(req: NextRequest) {
     if (err instanceof FileExtractError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
+    const busy = await aiBusyResponse(err, rl);
+    if (busy) return busy;
     const message =
       err instanceof Error ? err.message : "Could not read the resume.";
     return NextResponse.json({ error: message }, { status: 502 });

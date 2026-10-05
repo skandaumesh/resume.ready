@@ -7,9 +7,10 @@ import {
 import { isLinkedInExport } from "@/lib/linkedin";
 import { coachLinkedInProfile } from "@/lib/ai/generateResume";
 import {
-  consumeRateLimit,
-  getClientIp,
+  aiBusyResponse,
+  consumePublicRateLimit,
   LIMITS,
+  publicLimitResponse,
 } from "@/lib/rateLimit";
 import { track } from "@/lib/track";
 
@@ -20,15 +21,11 @@ export const maxDuration = 90;
 // review. Each call costs a real AI request, so the anonymous IP budget is
 // small; signing up (free) gets the much higher per-user daily limit.
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req);
-  const rl = await consumeRateLimit(`ip:${ip}:plic`, LIMITS.publicLinkedinAi);
+  const rl = await consumePublicRateLimit(req, "plic", LIMITS.publicLinkedinAi, { usesAi: true });
   if (!rl.ok) {
-    return NextResponse.json(
-      {
-        error:
-          "You've used today's free AI rewrites from this network. Sign up (it's free) for a much higher daily limit.",
-      },
-      { status: 429 },
+    return publicLimitResponse(
+      rl,
+      "You've used today's free AI rewrites on this network (everyone on the same Wi-Fi shares them). Sign in (it's free) to keep going; your limit then counts just for you.",
     );
   }
 
@@ -72,6 +69,8 @@ export async function POST(req: NextRequest) {
     if (err instanceof FileExtractError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
+    const busy = await aiBusyResponse(err, rl);
+    if (busy) return busy;
     const message =
       err instanceof Error ? err.message : "Could not review the profile.";
     return NextResponse.json({ error: message }, { status: 502 });

@@ -6,6 +6,8 @@ import AppShell from "@/components/AppShell";
 import AtsAnalysis from "@/components/AtsAnalysis";
 import { computeAtsScore } from "@/lib/ats";
 import { EMPTY_CONTENT, ResumeContent, ContactInfo } from "@/lib/types";
+import AiWaitNotice from "@/components/AiWaitNotice";
+import { fetchAi } from "@/lib/aiFetch";
 
 interface ResumeRow {
   id: string;
@@ -33,6 +35,7 @@ export default function AtsCheckerPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [aiWait, setAiWait] = useState<number | null>(null);
   const [uploaded, setUploaded] = useState<{
     fileName: string;
     contact: Partial<ContactInfo>;
@@ -84,7 +87,7 @@ export default function AtsCheckerPage() {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch("/api/ats/parse", { method: "POST", body: formData });
+      const res = await fetchAi("/api/ats/parse", { method: "POST", body: formData }, setAiWait);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setUploadError(data?.error || "Could not read this file. Try another.");
@@ -197,6 +200,7 @@ export default function AtsCheckerPage() {
               <p className="mt-2 text-xs text-stone-400">
                 Your file is read to score it and is not saved.
               </p>
+              <AiWaitNotice seconds={aiWait} />
               {uploadError && (
                 <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
                   {uploadError}

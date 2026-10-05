@@ -6,6 +6,9 @@ import AtsAnalysis from "@/components/AtsAnalysis";
 import { AtsResult } from "@/lib/ats";
 import type { LinkedInProfileHeader } from "@/lib/linkedin";
 import type { LinkedInAiAdvice } from "@/lib/ai/generateResume";
+import AiWaitNotice from "@/components/AiWaitNotice";
+import SignInToContinue from "@/components/SignInToContinue";
+import { fetchAi } from "@/lib/aiFetch";
 
 // The LinkedIn review flow, shared by the signed-in page (/dashboard/linkedin)
 // and the public no-login page (/linkedin-check) — only the endpoints differ.
@@ -33,6 +36,9 @@ export default function LinkedInReview({
   const [advice, setAdvice] = useState<LinkedInAiAdvice | null>(null);
   const [adviceLoading, setAdviceLoading] = useState(false);
   const [adviceError, setAdviceError] = useState<string | null>(null);
+  const [aiWait, setAiWait] = useState<number | null>(null);
+  // Set when a no-login limit is used up for the whole network (see API).
+  const [signInNeeded, setSignInNeeded] = useState(false);
   const [lastFile, setLastFile] = useState<File | null>(null);
   const coachRef = useRef<HTMLDivElement>(null);
 
@@ -74,12 +80,14 @@ export default function LinkedInReview({
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch(suggestEndpoint, {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetchAi(
+        suggestEndpoint,
+        { method: "POST", body: formData },
+        setAiWait,
+      );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (data?.signIn) setSignInNeeded(true);
         setAdviceError(
           data?.error || "The AI coach is busy right now. Try again in a moment.",
         );
@@ -99,6 +107,7 @@ export default function LinkedInReview({
     if (!file) return;
 
     setError(null);
+    setSignInNeeded(false);
     setResult(null);
     setAdvice(null);
     setAdviceError(null);
@@ -114,6 +123,7 @@ export default function LinkedInReview({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (data?.signIn) setSignInNeeded(true);
         setError(data?.error || "Could not analyze this file. Try again.");
       } else {
         setResult({
@@ -188,6 +198,7 @@ export default function LinkedInReview({
             {error}
           </p>
         )}
+        {error && signInNeeded && <SignInToContinue />}
       </div>
 
       {/* Report */}
@@ -268,6 +279,7 @@ export default function LinkedInReview({
             </p>
           )}
 
+          <AiWaitNotice seconds={aiWait} className="mt-4" />
           {adviceError && (
             <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-amber-50 p-3.5">
               <p className="text-sm text-amber-900">{adviceError}</p>
@@ -279,6 +291,7 @@ export default function LinkedInReview({
                   Retry
                 </button>
               )}
+              {signInNeeded && <SignInToContinue className="w-full" />}
             </div>
           )}
 

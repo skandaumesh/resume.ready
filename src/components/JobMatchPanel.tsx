@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ResumeContent } from "@/lib/types";
 import { computeJobMatch, JobMatchResult } from "@/lib/jobMatch";
+import AiWaitNotice from "@/components/AiWaitNotice";
+import { fetchAi } from "@/lib/aiFetch";
 
 // Paste a job description, get an instant keyword-match score (runs in the
 // browser, no API). Then optionally let the AI tailor the resume to the JD; the
@@ -27,6 +29,7 @@ export default function JobMatchPanel({
   } | null>(null);
   const [enhanced, setEnhanced] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiWait, setAiWait] = useState<number | null>(null);
 
   function run() {
     setImprovement(null);
@@ -44,11 +47,15 @@ export default function JobMatchPanel({
     const before = (result ?? computeJobMatch(content, jd)).score;
     setError(null);
     setEnhancing(true);
-    const res = await fetch(`/api/resumes/${resumeId}/tailor`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jobDescription: jd }),
-    });
+    const res = await fetchAi(
+      `/api/resumes/${resumeId}/tailor`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobDescription: jd }),
+      },
+      setAiWait,
+    );
     setEnhancing(false);
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
@@ -103,6 +110,7 @@ export default function JobMatchPanel({
         )}
       </div>
 
+      <AiWaitNotice seconds={aiWait} />
       {error && (
         <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
           {error}

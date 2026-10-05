@@ -6,10 +6,9 @@ import {
   extractLinkedInHeader,
 } from "@/lib/linkedin";
 import {
-  consumeRateLimit,
-  getClientIp,
+  consumePublicRateLimit,
   LIMITS,
-  PUBLIC_LIMIT_MESSAGE,
+  publicLimitResponse,
 } from "@/lib/rateLimit";
 import { track } from "@/lib/track";
 
@@ -20,11 +19,8 @@ export const maxDuration = 30;
 // (acquisition funnel, like /api/public/ats). Deterministic and AI-free, so
 // the IP limit is only there to stop scripted abuse.
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req);
-  const rl = await consumeRateLimit(`ip:${ip}:pli`, LIMITS.publicLinkedin);
-  if (!rl.ok) {
-    return NextResponse.json({ error: PUBLIC_LIMIT_MESSAGE }, { status: 429 });
-  }
+  const rl = await consumePublicRateLimit(req, "pli", LIMITS.publicLinkedin, { usesAi: false });
+  if (!rl.ok) return publicLimitResponse(rl);
 
   let formData: FormData;
   try {

@@ -12,7 +12,7 @@ import {
   parsedLooksEmpty,
   notAResumeMessage,
 } from "@/lib/resumeDetect";
-import { consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
+import { aiBusyResponse, consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
 import { track } from "@/lib/track";
 
 // pdf-parse and mammoth need the full Node.js runtime, not edge.
@@ -99,6 +99,8 @@ export async function POST(req: NextRequest) {
     await track("resume_imported", userId, { role: parsed.roleTitle || "General" });
     return NextResponse.json({ id: resume.id }, { status: 201 });
   } catch (err) {
+    const busy = await aiBusyResponse(err, rl);
+    if (busy) return busy;
     const message =
       err instanceof Error
         ? err.message

@@ -8,6 +8,8 @@ import { computeJobMatch } from "@/lib/jobMatch";
 import { renderResumeHtml } from "@/lib/resumeHtml";
 import { DEFAULT_TEMPLATE } from "@/lib/templates";
 import { EMPTY_CONTENT, ResumeContent, ContactInfo } from "@/lib/types";
+import AiWaitNotice from "@/components/AiWaitNotice";
+import { fetchAi } from "@/lib/aiFetch";
 
 interface ResumeRow {
   id: string;
@@ -53,6 +55,7 @@ export default function JdEnhancerPage() {
   const [jobText, setJobText] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiWait, setAiWait] = useState<number | null>(null);
   const [result, setResult] = useState<EnhanceResult | null>(null);
 
   useEffect(() => {
@@ -97,7 +100,7 @@ export default function JdEnhancerPage() {
     fd.append("save", "1"); // persist the tailored result so it can be downloaded
 
     try {
-      const res = await fetch("/api/enhance", { method: "POST", body: fd });
+      const res = await fetchAi("/api/enhance", { method: "POST", body: fd }, setAiWait);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.error || "Could not enhance the resume. Please try again.");
@@ -276,6 +279,7 @@ export default function JdEnhancerPage() {
                 </span>
               </div>
 
+              <AiWaitNotice seconds={aiWait} />
               {error && (
                 <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
               )}

@@ -14,6 +14,8 @@ import { TemplateId, DEFAULT_TEMPLATE, isTemplateId, TemplateOptions, FontId } f
 import EntryList, { EntryField } from "@/components/EntryList";
 import TemplateGallery from "@/components/TemplateGallery";
 import ScaledPreview from "@/components/ScaledResumePreview";
+import AiWaitNotice from "@/components/AiWaitNotice";
+import { fetchAi } from "@/lib/aiFetch";
 
 const EXPERIENCE_FIELDS: EntryField[] = [
   { id: "jobTitle", label: "Job title", placeholder: "Data Analyst Intern", half: true },
@@ -108,6 +110,7 @@ export default function EditResumePage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiWait, setAiWait] = useState<number | null>(null);
   const [savedNote, setSavedNote] = useState<string | null>(null);
   const [improving, setImproving] = useState<string | null>(null);
   const [improved, setImproved] = useState<Record<string, string[]>>({});
@@ -212,11 +215,15 @@ export default function EditResumePage() {
   // Called by EntryList's per-entry "Improve with AI" — polishes one entry's
   // description into bullet points via the same endpoint.
   async function improveText(fieldLabel: string, text: string): Promise<string[]> {
-    const res = await fetch(`/api/resumes/${id}/improve`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fieldLabel, text }),
-    });
+    const res = await fetchAi(
+      `/api/resumes/${id}/improve`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fieldLabel, text }),
+      },
+      setAiWait,
+    );
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       throw new Error(d?.error || "Could not improve this. Please try again.");
@@ -256,11 +263,15 @@ export default function EditResumePage() {
     }
     setError(null);
     setImproving(qid);
-    const res = await fetch(`/api/resumes/${id}/improve`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fieldLabel: label, text }),
-    });
+    const res = await fetchAi(
+      `/api/resumes/${id}/improve`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fieldLabel: label, text }),
+      },
+      setAiWait,
+    );
     setImproving(null);
     if (res.ok) {
       const { bullets } = await res.json();
@@ -317,11 +328,15 @@ export default function EditResumePage() {
   async function generate() {
     setError(null);
     setGenerating(true);
-    const res = await fetch(`/api/resumes/${id}/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, contact, answers }),
-    });
+    const res = await fetchAi(
+      `/api/resumes/${id}/generate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, contact, answers }),
+      },
+      setAiWait,
+    );
     setGenerating(false);
     if (res.ok) {
       const data = await res.json();
@@ -842,6 +857,8 @@ export default function EditResumePage() {
                     addLabel="Add work experience"
                     singular="Experience"
                     onImprove={(text) => improveText("work experience", text)}
+                    helpKind="experience"
+                    roleTitle={roleTitle}
                   />
                 </div>
               </>
@@ -864,6 +881,8 @@ export default function EditResumePage() {
                     addLabel="Add project"
                     singular="Project"
                     onImprove={(text) => improveText("project", text)}
+                    helpKind="project"
+                    roleTitle={roleTitle}
                   />
                 </div>
               </>
@@ -975,6 +994,7 @@ export default function EditResumePage() {
               </>
             )}
 
+            <AiWaitNotice seconds={aiWait} className="mt-4" />
             {error && (
               <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
             )}

@@ -9,7 +9,7 @@ import {
   FileExtractError,
 } from "@/lib/extractText";
 import { detectResumeText, notAResumeMessage } from "@/lib/resumeDetect";
-import { consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
+import { aiBusyResponse, consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
 import { track } from "@/lib/track";
 
 export const runtime = "nodejs";
@@ -125,6 +125,8 @@ export async function POST(req: NextRequest) {
     if (err instanceof FileExtractError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
+    const busy = await aiBusyResponse(err, rl);
+    if (busy) return busy;
     const message =
       err instanceof Error ? err.message : "Could not enhance the resume.";
     return NextResponse.json({ error: message }, { status: 502 });

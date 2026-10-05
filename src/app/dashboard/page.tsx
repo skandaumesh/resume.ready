@@ -9,6 +9,8 @@ import ResumeCardMenu from "@/components/ResumeCardMenu";
 import { renderResumeHtml } from "@/lib/resumeHtml";
 import { TEMPLATES } from "@/lib/templates";
 import { EMPTY_CONTENT } from "@/lib/types";
+import AiWaitNotice from "@/components/AiWaitNotice";
+import { fetchAi } from "@/lib/aiFetch";
 
 const INK = "#2563eb";
 const LIME = "#dbeafe";
@@ -31,6 +33,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [aiWait, setAiWait] = useState<number | null>(null);
   const [search, setSearch] = useState("");
 
   const filteredResumes = search.trim()
@@ -76,10 +79,11 @@ export default function DashboardPage() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("/api/resumes/import", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetchAi(
+        "/api/resumes/import",
+        { method: "POST", body: formData },
+        setAiWait,
+      );
       if (res.ok) {
         const { id } = await res.json();
         router.push(`/resume/${id}/edit`);
@@ -224,6 +228,7 @@ export default function DashboardPage() {
           </div>
         )}
 
+        <AiWaitNotice seconds={aiWait} className="mt-4" />
         {uploadError && (
           <p className="mt-4 rounded-2xl bg-red-100 p-3.5 text-sm font-medium text-red-800">
             {uploadError}

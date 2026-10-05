@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { generateResumeContent } from "@/lib/ai/generateResume";
-import { consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
+import { aiBusyResponse, consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
 import { track } from "@/lib/track";
 
 // AI generation can take a while on free models — allow a longer function budget.
@@ -65,6 +65,8 @@ export async function POST(
       where: { id },
       data: { answers: answers as object, contact: contact as object },
     });
+    const busy = await aiBusyResponse(err, rl);
+    if (busy) return busy;
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

@@ -3,10 +3,10 @@ import { roastResume } from "@/lib/ai/generateResume";
 import { extractDocumentText, truncateForModel, FileExtractError } from "@/lib/extractText";
 import { detectResumeText, notAResumeMessage } from "@/lib/resumeDetect";
 import {
-  consumeRateLimit,
-  getClientIp,
+  aiBusyResponse,
+  consumePublicRateLimit,
   LIMITS,
-  PUBLIC_LIMIT_MESSAGE,
+  publicLimitResponse,
 } from "@/lib/rateLimit";
 import { track } from "@/lib/track";
 
@@ -17,11 +17,8 @@ export const maxDuration = 90;
 // Upload a resume, get 2-3 brutally honest lines plus 3 quick fixes. Heavily
 // IP rate-limited: it's designed to be shared, which means bots find it too.
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req);
-  const rl = await consumeRateLimit(`ip:${ip}:roast`, LIMITS.publicRoast);
-  if (!rl.ok) {
-    return NextResponse.json({ error: PUBLIC_LIMIT_MESSAGE }, { status: 429 });
-  }
+  const rl = await consumePublicRateLimit(req, "roast", LIMITS.publicRoast, { usesAi: true });
+  if (!rl.ok) return publicLimitResponse(rl);
 
   let formData: FormData;
   try {
@@ -60,6 +57,8 @@ export async function POST(req: NextRequest) {
     if (err instanceof FileExtractError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
+    const busy = await aiBusyResponse(err, rl);
+    if (busy) return busy;
     const message =
       err instanceof Error ? err.message : "Could not roast the resume.";
     return NextResponse.json({ error: message }, { status: 502 });

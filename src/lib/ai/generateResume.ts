@@ -106,7 +106,8 @@ function getProviders(): Provider[] {
       url: GEMINI_URL,
       apiKey: geminiKey,
       models: splitModels(
-        process.env.GEMINI_MODEL || "gemini-3.8-flash,gemini-2.5-flash-lite,gemini-1.5-flash",
+        process.env.GEMINI_MODEL ||
+          "gemini-3.8-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite",
       ),
     });
   }
@@ -128,7 +129,8 @@ function getProviders(): Provider[] {
       name: "cerebras",
       url: CEREBRAS_URL,
       apiKey: cerebrasKey,
-      models: splitModels(process.env.CEREBRAS_MODEL || "llama-3.3-70b,llama3.1-8b"),
+      // Only these two are on Cerebras' free tier.
+      models: splitModels(process.env.CEREBRAS_MODEL || "gpt-oss-120b,qwen-3.8-27b"),
     });
   }
   const openrouterKey = process.env.OPENROUTER_API_KEY;
@@ -149,7 +151,50 @@ function getProviders(): Provider[] {
 
 type ModelResult =
   | { ok: true; content: string }
-  | { ok: false; retryable: boolean; fatal?: boolean; detail: string; retryAfterMs?: number };
+  | {
+      ok: false;
+      retryable: boolean;
+      /** 429 — this model's free-tier quota window is used up for now. */
+      rateLimited?: boolean;
+      fatal?: boolean;
+      detail: string;
+      retryAfterMs?: number;
+    };
+
+/**
+ * Every configured model is rate-limited right now — a capacity problem (say,
+ * a whole class clicking Generate at once), not a bug. Routes turn this into a
+ * 503 that the browser retries after `retryAfterSec` (see lib/aiFetch.ts).
+ */
+export class AiBusyError extends Error {
+  constructor(public retryAfterSec: number) {
+    super("We're getting unusually high demand right now. Please try again in a few minutes.");
+    this.name = "AiBusyError";
+  }
+}
+
+// Models that just answered 429, keyed "provider/model" → when they may be
+// tried again. Kept per server instance (not shared), but an instance serves
+// many requests, so a burst stops re-hitting models that already said "slow
+// down" — and waiting students get told how long until one frees up.
+const cooldownUntil = new Map<string, number>();
+// Without a Retry-After hint, rest a 429'd model for half a per-minute quota
+// window. In a 200-student simulation this halved the rejected calls sent to
+// providers versus 10s, with no change in how fast students were served.
+const DEFAULT_COOLDOWN_MS = 30000;
+const MAX_COOLDOWN_MS = 60000;
+
+// Seconds until the first cooled-down model frees up, clamped so students
+// neither hammer the providers nor wait longer than they need to.
+function busyRetryAfterSec(): number {
+  const now = Date.now();
+  let soonest = Infinity;
+  for (const until of cooldownUntil.values()) {
+    if (until > now) soonest = Math.min(soonest, until - now);
+  }
+  const sec = Number.isFinite(soonest) ? Math.ceil(soonest / 1000) : 10;
+  return Math.min(Math.max(sec, 5), 30);
+}
 
 // Overall wall-clock budget for a whole call (all models, all passes). Kept
 // under the API routes' maxDuration (60s) so we return a friendly error rather
@@ -215,10 +260,11 @@ async function tryModel(
     }
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      const retryable = res.status === 429 || res.status >= 500;
+      const rateLimited = res.status === 429;
       return {
         ok: false,
-        retryable,
+        retryable: rateLimited || res.status >= 500,
+        rateLimited,
         detail: `${provider.name}/${model}: ${res.status} ${text.slice(0, 100)}`,
         retryAfterMs: parseRetryAfterMs(res),
       };
@@ -228,10 +274,11 @@ async function tryModel(
     // Some providers return a 200 whose body carries an error object.
     if (data?.error) {
       const code = data.error.code;
-      const retryable = code === 429 || (typeof code === "number" && code >= 500);
+      const rateLimited = code === 429;
       return {
         ok: false,
-        retryable,
+        retryable: rateLimited || (typeof code === "number" && code >= 500),
+        rateLimited,
         detail: `${provider.name}/${model}: ${String(data.error.message).slice(0, 100)}`,
         retryAfterMs: parseRetryAfterMs(res, data.error),
       };
@@ -272,16 +319,23 @@ export async function callAi(
 
   const deadline = Date.now() + TOTAL_BUDGET_MS;
   const failures: string[] = [];
+  let sawRateLimit = false;
 
-  // Up to 2 passes over the provider/model list. Free tiers are frequently
-  // ALL rate-limited for a few seconds at once; a short backoff before a
-  // second pass usually lets one recover.
+  // Up to 2 passes over the provider/model list. A short backoff before a
+  // second pass lets a model recover from a transient 5xx/timeout. Rate
+  // limits are different: per-minute quota windows don't reset in seconds,
+  // so those skip the second pass and the browser waits instead (AiBusyError).
   for (let pass = 0; pass < 2; pass++) {
     let sawRetryable = false;
     let backoffMs = 3500; // default wait before a second pass
 
     providerLoop: for (const provider of providers) {
       for (const model of provider.models) {
+        const key = `${provider.name}/${model}`;
+        if ((cooldownUntil.get(key) ?? 0) > Date.now()) {
+          sawRateLimit = true; // still cooling down from a recent 429
+          continue;
+        }
         const remaining = deadline - Date.now();
         if (remaining < 3000) break providerLoop; // out of time budget
         const result = await tryModel(
@@ -292,6 +346,12 @@ export async function callAi(
         );
         if (result.ok) return result.content;
         failures.push(result.detail);
+        if (result.rateLimited) {
+          sawRateLimit = true;
+          const coolMs = Math.min(result.retryAfterMs ?? DEFAULT_COOLDOWN_MS, MAX_COOLDOWN_MS);
+          cooldownUntil.set(key, Date.now() + coolMs);
+          continue;
+        }
         if (result.fatal) continue providerLoop; // bad key — next provider
         if (result.retryable) {
           sawRetryable = true;
@@ -301,7 +361,7 @@ export async function callAi(
     }
 
     // Only a second pass is worthwhile if something was transiently busy.
-    if (!sawRetryable) break;
+    if (sawRateLimit || !sawRetryable) break;
     const wait = Math.min(backoffMs, deadline - Date.now() - 3000);
     if (wait <= 0) break;
     await sleep(wait);
@@ -309,6 +369,11 @@ export async function callAi(
 
   // Full provider/model/status detail is for our own debugging only — never
   // send it to the browser. Log it server-side, throw a clean message.
+  if (sawRateLimit) {
+    const retryAfterSec = busyRetryAfterSec();
+    console.warn(`[callAi] all models busy, browser retries in ${retryAfterSec}s:`, failures.join(" | "));
+    throw new AiBusyError(retryAfterSec);
+  }
   console.error("[callAi] all providers exhausted:", failures.join(" | "));
   throw new Error(
     "We're getting unusually high demand right now. Please try again in a few minutes.",

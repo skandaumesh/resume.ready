@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { enhanceForJob } from "@/lib/ai/generateResume";
 import { EMPTY_CONTENT, ResumeContent } from "@/lib/types";
-import { consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
+import { aiBusyResponse, consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
 import { track } from "@/lib/track";
 
 export const maxDuration = 60;
@@ -61,6 +61,8 @@ export async function POST(
     await track("resume_tailored", userId, { role: resume.role });
     return NextResponse.json({ content });
   } catch (err) {
+    const busy = await aiBusyResponse(err, rl);
+    if (busy) return busy;
     const message =
       err instanceof Error ? err.message : "Could not tailor the resume.";
     return NextResponse.json({ error: message }, { status: 502 });

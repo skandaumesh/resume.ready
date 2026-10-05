@@ -7,7 +7,7 @@ import {
 } from "@/lib/extractText";
 import { isLinkedInExport } from "@/lib/linkedin";
 import { coachLinkedInProfile } from "@/lib/ai/generateResume";
-import { consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
+import { aiBusyResponse, consumeRateLimit, LIMITS, AI_LIMIT_MESSAGE } from "@/lib/rateLimit";
 import { track } from "@/lib/track";
 
 export const runtime = "nodejs";
@@ -68,6 +68,8 @@ export async function POST(req: NextRequest) {
     if (err instanceof FileExtractError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
+    const busy = await aiBusyResponse(err, rl);
+    if (busy) return busy;
     const message =
       err instanceof Error ? err.message : "Could not review the profile.";
     return NextResponse.json({ error: message }, { status: 502 });
